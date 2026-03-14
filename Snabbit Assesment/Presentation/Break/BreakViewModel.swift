@@ -7,7 +7,7 @@
 import Foundation
 
 final class BreakViewModel: BreakViewModelProtocol {
-
+    
     private let fetchBreakUseCase: FetchBreakUseCaseProtocol
     private let endBreakUseCase: EndBreakUseCaseProtocol
     
@@ -15,12 +15,18 @@ final class BreakViewModel: BreakViewModelProtocol {
     
     private var timer: Timer?
     
+    private var state: BreakState = .notStarted
+    
+    var onBreakStateChanged: ((BreakState) -> Void)?
+    
     var onTimerUpdate: ((String, Float) -> Void)?
+    
+    var onBreakFinishedUIUpdate: (() -> Void)?
     
     var onBreakEnded: (() -> Void)?
     
     var remainingTime: String = ""
-
+    
     var breakEndTime: String = ""
     
     init(fetchBreakUseCase: FetchBreakUseCaseProtocol,
@@ -30,22 +36,23 @@ final class BreakViewModel: BreakViewModelProtocol {
         self.endBreakUseCase = endBreakUseCase
     }
     
-    func start() {
+    func startBreak() {
         
         Task {
-
-                let breakData = try await fetchBreakUseCase.execute()
-
-                self.breakModel = breakData
-
-                // Format break end time
-                let formatter = DateFormatter()
-                formatter.dateFormat = "hh:mm a"
-
-                breakEndTime = formatter.string(from: breakData.endTime)
-
-                startTimer()
-            }
+            
+            let breakData = try await fetchBreakUseCase.execute()
+            
+            self.breakModel = breakData
+            
+            let formatter = DateFormatter()
+            formatter.dateFormat = "hh:mm a"
+            breakEndTime = formatter.string(from: breakData.endTime)
+            
+            state = .running
+            onBreakStateChanged?(.running)
+            
+            startTimer()
+        }
     }
     
     private func startTimer() {
@@ -67,6 +74,9 @@ final class BreakViewModel: BreakViewModelProtocol {
             
             timer?.invalidate()
             
+            state = .ended
+            
+            onBreakFinishedUIUpdate?()
             onBreakEnded?()
             
             return
@@ -83,12 +93,14 @@ final class BreakViewModel: BreakViewModelProtocol {
     }
     
     func endBreakEarly() {
-        
         Task {
             try await endBreakUseCase.execute()
             
             timer?.invalidate()
             
+            state = .ended
+            
+            onBreakFinishedUIUpdate?()
             onBreakEnded?()
         }
     }

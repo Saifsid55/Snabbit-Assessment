@@ -23,12 +23,18 @@ final class LoginViewController: UIViewController {
     private let continueButton = UIButton()
     private let signupButton = UIButton()
     
+    let tap = UITapGestureRecognizer(
+        target: LoginViewController.self,
+        action: #selector(dismissKeyboard)
+    )
+    
     init(viewModel: LoginViewModelProtocol,
          container: AppDependencyContainer) {
         
         self.viewModel = viewModel
         self.container = container
         super.init(nibName: nil, bundle: nil)
+        view.addGestureRecognizer(tap)
     }
     
     required init?(coder: NSCoder) {
@@ -167,6 +173,12 @@ private extension LoginViewController {
             action: #selector(passwordChanged),
             for: .editingChanged
         )
+        
+        usernameTextField.delegate = self
+        passwordTextField.delegate = self
+        
+        usernameTextField.returnKeyType = .next
+        passwordTextField.returnKeyType = .done
     }
 }
 
@@ -228,5 +240,25 @@ private extension LoginViewController {
         print("Signup tapped")
         let signupVC = container.makeSignupViewController()
         navigationController?.pushViewController(signupVC, animated: true)
+    }
+    
+    @objc
+    func dismissKeyboard() {
+        view.endEditing(true)
+    }
+}
+
+
+extension LoginViewController: UITextFieldDelegate {
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        
+        if textField == usernameTextField {
+            passwordTextField.becomeFirstResponder()
+        } else {
+            textField.resignFirstResponder()
+        }
+        
+        return true
     }
 }

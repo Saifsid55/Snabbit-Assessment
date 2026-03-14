@@ -22,7 +22,8 @@ final class BreakViewController: UIViewController {
     private let timerCardView = BreakTimerCardView()
     private let timelineView = TimelineStatusView()
     
-    // MARK: - Init
+    private var isBreakRunning = false
+    
     
     init(viewModel: BreakViewModelProtocol,
          container: AppDependencyContainer) {
@@ -46,8 +47,8 @@ final class BreakViewController: UIViewController {
         setupLayout()
         bindViewModel()
         setupActions()
-        
-        viewModel.start()
+        timerCardView.endBreakButton.setTitle("Start my break", for: .normal)
+        timerCardView.endBreakButton.backgroundColor = .systemGreen
     }
 }
 
@@ -123,7 +124,11 @@ private extension BreakViewController {
     @objc
     func didTapEndBreak() {
         
-        showEndBreakConfirmation()
+        if isBreakRunning {
+            showEndBreakConfirmation()
+        } else {
+            viewModel.startBreak()
+        }
     }
     
     @objc
@@ -137,29 +142,15 @@ private extension BreakViewController {
     
     func showEndBreakConfirmation() {
         
-        let alert = UIAlertController(
-            title: "Ending break early?",
-            message: "Are you sure you want to end your break now?",
-            preferredStyle: .actionSheet
-        )
+        let sheet = EndBreakBottomSheetViewController()
         
-        let continueAction = UIAlertAction(
-            title: "Continue Break",
-            style: .cancel
-        )
+        sheet.modalPresentationStyle = .overFullScreen
         
-        let endNowAction = UIAlertAction(
-            title: "End Now",
-            style: .destructive
-        ) { [weak self] _ in
-            
+        sheet.onEndNow = { [weak self] in
             self?.viewModel.endBreakEarly()
         }
         
-        alert.addAction(continueAction)
-        alert.addAction(endNowAction)
-        
-        present(alert, animated: true)
+        present(sheet, animated: true)
     }
 }
 
@@ -188,11 +179,60 @@ private extension BreakViewController {
             
             DispatchQueue.main.async {
                 
-                self?.showBreakEndedState()
+                guard let self else { return }
+                
+                UIView.transition(
+                    with: self.timerCardView,
+                    duration: 0.4,
+                    options: .transitionCrossDissolve
+                ) {
+                    self.timerCardView.showBreakFinishedState()
+                }
             }
         }
         
+        viewModel.onBreakStateChanged = { [weak self] state in
+            
+            DispatchQueue.main.async {
+                
+                switch state {
+                    
+                case .notStarted:
+                    
+                    self?.timerCardView.endBreakButton.setTitle("Start my break", for: .normal)
+                    self?.timerCardView.endBreakButton.backgroundColor = .systemGreen
+                    self?.isBreakRunning = false
+                    
+                case .running:
+                    
+                    self?.timerCardView.endBreakButton.setTitle("End my break", for: .normal)
+                    self?.timerCardView.endBreakButton.backgroundColor = .systemRed
+                    self?.isBreakRunning = true
+                    
+                case .ended:
+                    break
+                }
+            }
+        }
         
+        viewModel.onBreakFinishedUIUpdate = { [weak self] in
+            
+            DispatchQueue.main.async {
+                
+                guard let self else { return }
+                
+                UIView.animate(withDuration: 0.3) {
+                    
+                    self.timerCardView.endBreakButton.alpha = 0
+                    self.timerCardView.breakEndsLabel.alpha = 0
+                    
+                } completion: { _ in
+                    
+                    self.timerCardView.endBreakButton.isHidden = true
+                    self.timerCardView.breakEndsLabel.isHidden = true
+                }
+            }
+        }
     }
 }
 

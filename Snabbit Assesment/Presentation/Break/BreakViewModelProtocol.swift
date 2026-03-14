@@ -15,7 +15,11 @@ protocol BreakViewModelProtocol {
     
     var breakEndTime: String { get }
     
-    func start()
+    var onBreakStateChanged: ((BreakState) -> Void)? { get set }
+    
+    var onBreakFinishedUIUpdate: (() -> Void)? { get set }
+    
+    func startBreak()
     
     func endBreakEarly()
 }
