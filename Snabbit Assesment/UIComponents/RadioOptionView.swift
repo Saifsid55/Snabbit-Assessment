@@ -5,13 +5,12 @@ final class RadioOptionView: UIView {
     
     private let outerCircle = UIView()
     private let innerCircle = UIView()
-    private let label = UILabel()
     
     var onTap: (() -> Void)?
     
-    init(title: String) {
-        super.init(frame: .zero)
-        setupUI(title: title)
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setupUI()
         setupGesture()
     }
     
@@ -19,7 +18,7 @@ final class RadioOptionView: UIView {
         fatalError()
     }
     
-    private func setupUI(title: String) {
+    private func setupUI() {
         
         outerCircle.layer.cornerRadius = 12
         outerCircle.layer.borderWidth = 2
@@ -47,28 +46,19 @@ final class RadioOptionView: UIView {
             innerCircle.heightAnchor.constraint(equalToConstant: 12)
         ])
         
-        label.text = title
-        label.font = .systemFont(ofSize: 16)
+        addSubview(outerCircle)
         
-        let stack = UIStackView(arrangedSubviews: [outerCircle, label])
-        stack.axis = .horizontal
-        stack.spacing = 10
-        stack.alignment = .center
-        
-        addSubview(stack)
-        
-        stack.translatesAutoresizingMaskIntoConstraints = false
+        outerCircle.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: topAnchor),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor),
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor)
+            outerCircle.topAnchor.constraint(equalTo: topAnchor),
+            outerCircle.bottomAnchor.constraint(equalTo: bottomAnchor),
+            outerCircle.leadingAnchor.constraint(equalTo: leadingAnchor),
+            outerCircle.trailingAnchor.constraint(equalTo: trailingAnchor)
         ])
     }
     
     private func setupGesture() {
-        
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
         addGestureRecognizer(tap)
     }

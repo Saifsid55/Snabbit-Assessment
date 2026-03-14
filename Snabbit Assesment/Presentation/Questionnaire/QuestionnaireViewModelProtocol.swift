@@ -5,6 +5,8 @@ protocol QuestionnaireViewModelProtocol {
     
     var isContinueEnabled: ((Bool) -> Void)? { get set }
     
+    var onProgressChanged: ((Float) -> Void)?  { get set }
+    
     func toggleSkill(_ skill: String)
     
     func selectSmartphone(_ value: Bool)
