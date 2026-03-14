@@ -10,6 +10,7 @@ import UIKit
 final class QuestionnaireViewController: UIViewController {
     
     private var viewModel: QuestionnaireViewModelProtocol
+    private let container: AppDependencyContainer
     
     private var scrollView = UIScrollView()
     private var contentStack = UIStackView()
@@ -24,8 +25,11 @@ final class QuestionnaireViewController: UIViewController {
     private let progressFill = UIView()
     private var progressWidthConstraint: NSLayoutConstraint!
     
-    init(viewModel: QuestionnaireViewModelProtocol) {
+    init(viewModel: QuestionnaireViewModelProtocol,
+         container: AppDependencyContainer) {
+        
         self.viewModel = viewModel
+        self.container = container
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -366,15 +370,6 @@ private extension QuestionnaireViewController {
                             for: .editingChanged)
     }
     
-    @objc
-    func dobChanged() {
-        
-        viewModel.updateDOB(
-            day: dobDayTF.text ?? "",
-            month: dobMonthTF.text ?? "",
-            year: dobYearTF.text ?? ""
-        )
-    }
 }
 
 //MARK: - Continue Button
@@ -391,6 +386,19 @@ private extension QuestionnaireViewController {
         continueButton.alpha = 0.5
         
         contentStack.addArrangedSubview(continueButton)
+        
+        continueButton.addTarget(
+              self,
+              action: #selector(didTapContinue),
+              for: .touchUpInside
+          )
+    }
+    
+    private func navigateToBreakScreen() {
+
+        let breakVC = container.makeBreakViewController()
+
+        navigationController?.pushViewController(breakVC, animated: true)
     }
 }
 
@@ -414,5 +422,29 @@ private extension QuestionnaireViewController {
                 self?.updateProgress(progress)
             }
         }
+        
+        viewModel.onFormCompleted = { [weak self] in
+
+            DispatchQueue.main.async {
+
+                self?.navigateToBreakScreen()
+            }
+        }
+    }
+}
+
+@objc extension QuestionnaireViewController {
+    
+    func dobChanged() {
+        
+        viewModel.updateDOB(
+            day: dobDayTF.text ?? "",
+            month: dobMonthTF.text ?? "",
+            year: dobYearTF.text ?? ""
+        )
+    }
+
+    func didTapContinue() {
+        viewModel.submit()
     }
 }

@@ -7,6 +7,10 @@ protocol QuestionnaireViewModelProtocol {
     
     var onProgressChanged: ((Float) -> Void)?  { get set }
     
+    var onFormCompleted: (() -> Void)? { get set }
+
+    func submit()
+    
     func toggleSkill(_ skill: String)
     
     func selectSmartphone(_ value: Bool)
@@ -16,4 +20,5 @@ protocol QuestionnaireViewModelProtocol {
     func selectGoogleMaps(_ value: Bool)
     
     func updateDOB(day: String, month: String, year: String)
+    
 }

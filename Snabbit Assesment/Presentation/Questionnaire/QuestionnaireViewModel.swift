@@ -7,6 +7,7 @@ final class QuestionnaireViewModel: QuestionnaireViewModelProtocol {
     
     var isContinueEnabled: ((Bool) -> Void)?
     var onProgressChanged: ((Float) -> Void)?
+    var onFormCompleted: (() -> Void)?
     
     private var selectedSkills: Set<String> = []
     
@@ -17,7 +18,11 @@ final class QuestionnaireViewModel: QuestionnaireViewModelProtocol {
     private var dobDay = ""
     private var dobMonth = ""
     private var dobYear = ""
+    private var progress: Float = 0
     
+    private var isFormValid: Bool {
+        progress >= 1.0
+    }
     // MARK: - Skills
     
     func toggleSkill(_ skill: String) {
@@ -84,19 +89,23 @@ final class QuestionnaireViewModel: QuestionnaireViewModelProtocol {
         let total = 5
         
         if !selectedSkills.isEmpty { completed += 1 }
+        
         if hasSmartphone != nil { completed += 1 }
-        if canGetPhone != nil || hasSmartphone == true { completed += 1 }
+        
+        if hasSmartphone == true || canGetPhone != nil {
+            completed += 1
+        }
+        
         if googleMapsAnswer != nil { completed += 1 }
         
         if dobDay.count == 2 && dobMonth.count == 2 && dobYear.count == 4 {
             completed += 1
         }
         
-        let progress = Float(completed) / Float(total)
+        progress = Float(completed) / Float(total)
         
         onProgressChanged?(progress)
     }
-    
     // MARK: - Validation
     
     private func validate() {
@@ -129,5 +138,12 @@ final class QuestionnaireViewModel: QuestionnaireViewModelProtocol {
         }
         
         isContinueEnabled?(true)
+    }
+    
+    func submit() {
+        
+        guard isFormValid else { return }
+        
+        onFormCompleted?()
     }
 }

@@ -66,6 +66,22 @@ final class AppDependencyContainer {
 
         let vm = QuestionnaireViewModel()
 
-        return QuestionnaireViewController(viewModel: vm)
+        return QuestionnaireViewController(viewModel: vm, container: self)
+    }
+    
+    func makeBreakViewController() -> BreakViewController {
+
+        let repository = BreakRepository()
+
+        let fetchBreak = FetchBreakUseCase(repository: repository)
+
+        let endBreak = EndBreakUseCase(repository: repository)
+
+        let viewModel = BreakViewModel(
+            fetchBreakUseCase: fetchBreak,
+            endBreakUseCase: endBreak
+        )
+
+        return BreakViewController(viewModel: viewModel, container: self)
     }
 }
