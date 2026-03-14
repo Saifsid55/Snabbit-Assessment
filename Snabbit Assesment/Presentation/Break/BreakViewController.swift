@@ -97,7 +97,6 @@ private extension BreakViewController {
         
         headerView.heightAnchor.constraint(equalToConstant: 44).isActive = true
         
-        timerCardView.heightAnchor.constraint(equalToConstant: 360).isActive = true
     }
 }
 
@@ -112,12 +111,25 @@ private extension BreakViewController {
             action: #selector(didTapEndBreak),
             for: .touchUpInside
         )
+        
+        headerView.helpButton.addTarget(
+            self,
+            action: #selector(didTapHelp),
+            for: .touchUpInside
+        )
+        
     }
     
     @objc
     func didTapEndBreak() {
         
         showEndBreakConfirmation()
+    }
+    
+    @objc
+    func didTapHelp() {
+        let logoutVC = container.makeLogoutViewController()
+        navigationController?.pushViewController(logoutVC, animated: true)
     }
 }
 
@@ -168,7 +180,7 @@ private extension BreakViewController {
                 )
                 
                 self?.timerCardView.breakEndsLabel.text =
-                        "Break ends at \(self?.viewModel.breakEndTime ?? "")"
+                "Break ends at \(self?.viewModel.breakEndTime ?? "")"
             }
         }
         

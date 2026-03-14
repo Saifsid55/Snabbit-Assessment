@@ -9,21 +9,18 @@ import UIKit
 
 final class BreakTimerCardView: UIView {
     
-    let timerView = CircularTimerView()
-    
-    let titleLabel = UILabel()
-    let subtitleLabel = UILabel()
-    let breakEndsLabel = UILabel()
-    
-    let endBreakButton = UIButton()
-    
-    private let gradientLayer = CAGradientLayer()
+    var titleLabel: UILabel!
+    var subtitleLabel: UILabel!
+    var timerView: CircularTimerView!
+    var breakEndsLabel: UILabel!
+    var endBreakButton: UIButton!
+    var stack: UIStackView!
+    var backgroundImageView: UIImageView!
     
     override init(frame: CGRect) {
         super.init(frame: frame)
         
         setupUI()
-        setupGradient()
     }
     
     required init?(coder: NSCoder) {
@@ -32,7 +29,6 @@ final class BreakTimerCardView: UIView {
     
     override func layoutSubviews() {
         super.layoutSubviews()
-        gradientLayer.frame = bounds
     }
     
     private func setupUI() {
@@ -40,42 +36,42 @@ final class BreakTimerCardView: UIView {
         layer.cornerRadius = 16
         clipsToBounds = true
         
-        titleLabel.text = "We value your hard work!"
-        titleLabel.textColor = .white
-        titleLabel.font = .systemFont(ofSize: 16, weight: .semibold)
-        titleLabel.textAlignment = .center
+        setupBackground()
+        setupStack()
+        createTitleLabel()
+        subTitleLabel()
+        setupTimerView()
+        setupBreakEndsLabel()
+        setupEndBreakButton()
+    }
+    
+    private func setupBackground() {
+        backgroundImageView = UIImageView()
+        backgroundImageView.image = UIImage(named: "timerCardBG")
+        backgroundImageView.contentMode = .scaleAspectFill
+        backgroundImageView.clipsToBounds = true
         
-        subtitleLabel.text = "Take this time to relax"
-        subtitleLabel.textColor = .white
-        subtitleLabel.font = .systemFont(ofSize: 14)
-        subtitleLabel.textAlignment = .center
+        insertSubview(backgroundImageView, at: 0)
+        backgroundImageView.translatesAutoresizingMaskIntoConstraints = false
         
-        breakEndsLabel.textColor = .white
-        breakEndsLabel.font = .systemFont(ofSize: 14)
-        breakEndsLabel.textAlignment = .center
-        
-        endBreakButton.setTitle("End my break", for: .normal)
-        endBreakButton.backgroundColor = .systemRed
-        endBreakButton.layer.cornerRadius = 10
-        endBreakButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
-        
-        let stack = UIStackView(arrangedSubviews: [
-            titleLabel,
-            subtitleLabel,
-            timerView,
-            breakEndsLabel,
-            endBreakButton
+        NSLayoutConstraint.activate([
+            backgroundImageView.topAnchor.constraint(equalTo: topAnchor),
+            backgroundImageView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            backgroundImageView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            backgroundImageView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
+    }
+    
+    
+    private func setupStack() {
+        stack = UIStackView()
+        addSubview(stack)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        
         
         stack.axis = .vertical
-        stack.spacing = 16
-        stack.alignment = .center   // IMPORTANT
-        
-        addSubview(stack)
-        
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        timerView.translatesAutoresizingMaskIntoConstraints = false
-        endBreakButton.translatesAutoresizingMaskIntoConstraints = false
+        stack.spacing = 12
+        stack.alignment = .center
         
         NSLayoutConstraint.activate([
             
@@ -83,23 +79,70 @@ final class BreakTimerCardView: UIView {
             stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
             stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -24),
-            
-            timerView.heightAnchor.constraint(equalToConstant: 180),
-            timerView.widthAnchor.constraint(equalToConstant: 180),
-//            timerView.centerXAnchor.constraint(equalTo: stack.centerXAnchor),
-            
-            endBreakButton.heightAnchor.constraint(equalToConstant: 44)
         ])
     }
     
-    private func setupGradient() {
+    
+    private func createTitleLabel() {
+        titleLabel = UILabel()
+        titleLabel.text = "We value your hard work!"
+        titleLabel.textColor = .white
+        titleLabel.font = .systemFont(ofSize: 16, weight: .semibold)
+        titleLabel.textAlignment = .center
+        titleLabel.numberOfLines = 0          // ← ADD THIS
+        titleLabel.setContentHuggingPriority(.required, for: .vertical)  // ← ADD THIS
         
-        gradientLayer.colors = [
-            UIColor(red: 0.45, green: 0.30, blue: 0.95, alpha: 1).cgColor,
-            UIColor(red: 0.22, green: 0.47, blue: 0.90, alpha: 1).cgColor
-        ]
-        gradientLayer.startPoint = CGPoint(x: 0, y: 0)
-        gradientLayer.endPoint = CGPoint(x: 1, y: 1)
-        layer.insertSublayer(gradientLayer, at: 0)
+        stack.addArrangedSubview(titleLabel)
     }
+    
+    private func subTitleLabel() {
+        subtitleLabel = UILabel()
+        subtitleLabel.text = "Take this time to relax"
+        subtitleLabel.textColor = .white
+        subtitleLabel.font = .systemFont(ofSize: 14)
+        subtitleLabel.textAlignment = .center
+        subtitleLabel.numberOfLines = 0       // ← ADD THIS
+        subtitleLabel.setContentHuggingPriority(.required, for: .vertical)  // ← ADD THIS
+        
+        stack.addArrangedSubview(subtitleLabel)
+    }
+    
+    
+    private func setupTimerView() {
+        timerView = CircularTimerView()
+        timerView.translatesAutoresizingMaskIntoConstraints = false
+        stack.addArrangedSubview(timerView)
+        
+        NSLayoutConstraint.activate([
+            timerView.heightAnchor.constraint(equalToConstant: 200),
+            timerView.widthAnchor.constraint(equalToConstant: 180),
+            timerView.centerXAnchor.constraint(equalTo: stack.centerXAnchor)
+        ])
+    }
+    
+    private func setupBreakEndsLabel() {
+        breakEndsLabel = UILabel()
+        breakEndsLabel.text = "Break ends at --:-- --"  // ← placeholder until VM updates it
+        breakEndsLabel.textColor = UIColor.white.withAlphaComponent(0.85)
+        breakEndsLabel.font = .systemFont(ofSize: 14, weight: .medium)
+        breakEndsLabel.textAlignment = .center
+        stack.addArrangedSubview(breakEndsLabel)
+    }
+    
+    private func setupEndBreakButton() {
+        endBreakButton = UIButton()
+        endBreakButton.translatesAutoresizingMaskIntoConstraints = false
+        endBreakButton.setTitle("End my break", for: .normal)
+        endBreakButton.backgroundColor = .systemRed
+        endBreakButton.layer.cornerRadius = 10
+        endBreakButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        
+        stack.addArrangedSubview(endBreakButton)
+        
+        NSLayoutConstraint.activate([
+            endBreakButton.heightAnchor.constraint(equalToConstant: 44),
+            endBreakButton.widthAnchor.constraint(equalTo: stack.widthAnchor)  // ← ADD THIS
+        ])
+    }
+    
 }

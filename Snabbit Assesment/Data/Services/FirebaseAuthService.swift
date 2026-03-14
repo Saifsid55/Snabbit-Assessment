@@ -45,4 +45,8 @@ final class FirebaseAuthService {
             completion(.success(uid))
         }
     }
+    
+    func logout() throws {
+        try Auth.auth().signOut()
+    }
 }
