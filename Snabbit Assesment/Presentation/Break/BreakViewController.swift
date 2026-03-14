@@ -162,53 +162,34 @@ private extension BreakViewController {
     func bindViewModel() {
         
         viewModel.onTimerUpdate = { [weak self] time, progress in
-            
             DispatchQueue.main.async {
-                
-                self?.timerCardView.timerView.update(
-                    time: time,
-                    progress: progress
-                )
-                
+                self?.timerCardView.timerView.update(time: time, progress: progress)
                 self?.timerCardView.breakEndsLabel.text =
                 "Break ends at \(self?.viewModel.breakEndTime ?? "")"
             }
         }
         
         viewModel.onBreakEnded = { [weak self] in
-            
             DispatchQueue.main.async {
-                
                 guard let self else { return }
-                
-                UIView.transition(
-                    with: self.timerCardView,
-                    duration: 0.4,
-                    options: .transitionCrossDissolve
-                ) {
-                    self.timerCardView.showBreakFinishedState()
+                self.timerCardView.showBreakFinishedState()
+                UIView.animate(withDuration: 0.4) {
+                    self.scrollView.layoutIfNeeded()
                 }
             }
         }
         
         viewModel.onBreakStateChanged = { [weak self] state in
-            
             DispatchQueue.main.async {
-                
                 switch state {
-                    
                 case .notStarted:
-                    
                     self?.timerCardView.endBreakButton.setTitle("Start my break", for: .normal)
                     self?.timerCardView.endBreakButton.backgroundColor = .systemGreen
                     self?.isBreakRunning = false
-                    
                 case .running:
-                    
                     self?.timerCardView.endBreakButton.setTitle("End my break", for: .normal)
                     self?.timerCardView.endBreakButton.backgroundColor = .systemRed
                     self?.isBreakRunning = true
-                    
                 case .ended:
                     break
                 }
@@ -233,23 +214,5 @@ private extension BreakViewController {
                 }
             }
         }
-    }
-}
-
-private extension BreakViewController {
-    
-    func showBreakEndedState() {
-        
-        let alert = UIAlertController(
-            title: "Break Finished",
-            message: "Hope you are feeling refreshed and ready to start working again.",
-            preferredStyle: .alert
-        )
-        
-        let ok = UIAlertAction(title: "OK", style: .default)
-        
-        alert.addAction(ok)
-        
-        present(alert, animated: true)
     }
 }

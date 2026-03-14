@@ -18,9 +18,14 @@ final class BreakTimerCardView: UIView {
     var backgroundImageView: UIImageView!
     var breakFinishedLabel: UILabel!
     var successView: RippleSuccessView!
+    private var topSpacer: UIView!
+    private var bottomSpacer: UIView!
     
     private var timerHeightConstraint: NSLayoutConstraint!
     private var endBreakButtonHeightConstraint: NSLayoutConstraint!
+    private var spacerEqualHeightConstraint: NSLayoutConstraint!
+    private var topSpacerFixedConstraint: NSLayoutConstraint!
+    private var bottomSpacerFixedConstraint: NSLayoutConstraint!
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -65,8 +70,15 @@ final class BreakTimerCardView: UIView {
             backgroundImageView.topAnchor.constraint(equalTo: topAnchor),
             backgroundImageView.leadingAnchor.constraint(equalTo: leadingAnchor),
             backgroundImageView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            backgroundImageView.bottomAnchor.constraint(equalTo: bottomAnchor)
+            backgroundImageView.bottomAnchor.constraint(equalTo: bottomAnchor), // ← keep this
+            
+            // ← ADD: break the intrinsic size resistance
+            backgroundImageView.heightAnchor.constraint(greaterThanOrEqualToConstant: 0)
         ])
+        
+        // ← Lower content hugging so image doesn't resist compression
+        backgroundImageView.setContentHuggingPriority(.defaultLow, for: .vertical)
+        backgroundImageView.setContentCompressionResistancePriority(.defaultLow, for: .vertical) // ← KEY FIX
     }
     
     
@@ -74,21 +86,28 @@ final class BreakTimerCardView: UIView {
         stack = UIStackView()
         addSubview(stack)
         stack.translatesAutoresizingMaskIntoConstraints = false
-        
-        
         stack.axis = .vertical
         stack.spacing = 12
         stack.alignment = .center
         
         NSLayoutConstraint.activate([
-            
-            stack.topAnchor.constraint(equalTo: topAnchor, constant: 24),
+            stack.topAnchor.constraint(equalTo: topAnchor),
             stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
             stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -24),
+            stack.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
+        
+        topSpacer = UIView()
+        bottomSpacer = UIView()
+        topSpacer.translatesAutoresizingMaskIntoConstraints = false
+        bottomSpacer.translatesAutoresizingMaskIntoConstraints = false
+        
+        // ← NO greaterThanOrEqual here — only store these for later use
+        topSpacerFixedConstraint = topSpacer.heightAnchor.constraint(equalToConstant: 24)
+        bottomSpacerFixedConstraint = bottomSpacer.heightAnchor.constraint(equalToConstant: 24)
+        
+        stack.addArrangedSubview(topSpacer)
     }
-    
     
     private func createTitleLabel() {
         titleLabel = UILabel()
@@ -148,11 +167,15 @@ final class BreakTimerCardView: UIView {
         stack.addArrangedSubview(endBreakButton)
         
         endBreakButtonHeightConstraint = endBreakButton.heightAnchor.constraint(equalToConstant: 44)
-        
         NSLayoutConstraint.activate([
             endBreakButtonHeightConstraint,
             endBreakButton.widthAnchor.constraint(equalTo: stack.widthAnchor)
         ])
+        
+        stack.addArrangedSubview(bottomSpacer)
+        
+        spacerEqualHeightConstraint = topSpacer.heightAnchor.constraint(equalTo: bottomSpacer.heightAnchor)
+        spacerEqualHeightConstraint.isActive = true
     }
     
     private func setupSuccessView() {
@@ -173,22 +196,24 @@ final class BreakTimerCardView: UIView {
     private func setupBreakFinishedLabel() {
         
         breakFinishedLabel = UILabel()
-        breakFinishedLabel.text =
-        "Hope you are feeling refreshed and ready to start working again"
-        
+        breakFinishedLabel.text = "Hope you are feeling refreshed and ready to start working again"
         breakFinishedLabel.textColor = .white
         breakFinishedLabel.font = .systemFont(ofSize: 16, weight: .semibold)
         breakFinishedLabel.textAlignment = .center
         breakFinishedLabel.numberOfLines = 0
         breakFinishedLabel.isHidden = true
         
-        stack.addArrangedSubview(breakFinishedLabel)
+        stack.insertArrangedSubview(breakFinishedLabel, at: stack.arrangedSubviews.count - 1)
     }
     
     func showBreakFinishedState() {
-        
         timerHeightConstraint.isActive = false
         endBreakButtonHeightConstraint.isActive = false
+        
+        spacerEqualHeightConstraint.isActive = false
+        topSpacerFixedConstraint.isActive = true     // ← ADD
+        bottomSpacerFixedConstraint.isActive = true  // ← ADD
+        
         titleLabel.isHidden = true
         subtitleLabel.isHidden = true
         timerView.isHidden = true
@@ -197,6 +222,7 @@ final class BreakTimerCardView: UIView {
         
         successView.isHidden = false
         breakFinishedLabel.isHidden = false
+        successView.startRippleAnimation()
         
         UIView.animate(withDuration: 0.35) {
             self.layoutIfNeeded()
