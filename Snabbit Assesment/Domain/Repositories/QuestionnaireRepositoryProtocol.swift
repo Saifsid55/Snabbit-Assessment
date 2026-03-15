@@ -17,4 +17,6 @@ protocol QuestionnaireRepositoryProtocol {
         state: QuestionnaireState,
         completion: @escaping (Result<Void, Error>) -> Void
     )
+    
+    func hasSubmittedQuestionnaire() async throws -> Bool
 }

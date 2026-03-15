@@ -606,7 +606,6 @@ extension QuestionnaireViewController {
     
     @objc func dismissKeyboard() { view.endEditing(true) }
     
-    // MARK: - Keyboard show / hide
     
     @objc func keyboardWillShow(_ notification: Notification) {
         guard

@@ -65,15 +65,15 @@ final class FirebaseQuestionnaireService {
     ) {
         
         let data: [String: Any] = [
-
+            
             "skills": Array(state.selectedSkills),
-
+            
             "smartphone": state.smartphoneAnswer ?? "",
             "phone_requirement": state.phoneRequirementAnswer ?? "",
             "google_maps": state.googleMapsAnswer ?? "",
-
+            
             "dob": "\(state.dobDay)-\(state.dobMonth)-\(state.dobYear)",
-
+            
             "submittedAt": Timestamp()
         ]
         
@@ -89,6 +89,20 @@ final class FirebaseQuestionnaireService {
                     completion(.success(()))
                 }
             }
+    }
+    
+    func hasSubmittedQuestionnaire(
+        userId: String
+    ) async throws -> Bool {
+        
+        let document = try await db
+            .collection("users")
+            .document(userId)
+            .collection("questionnaireResponses")
+            .document("answers")
+            .getDocument()
+        
+        return document.exists
     }
     
 }

@@ -13,18 +13,55 @@ final class FirebaseBreakService {
     private var listener: ListenerRegistration?
     
     
-    func startBreak(userId: String) async throws {
-
+    func initializeBreakDocument(userId: String) async throws {
         try await db
             .collection("users")
             .document(userId)
             .collection("breaks")
             .document("current")
-            .updateData([
+            .setData([
+                "duration": 900,
+                "status": "not_started",
+                "breakTaken": false
+            ], merge: true)               
+    }
+    
+    func startBreak(userId: String) async throws {
+        
+        try await db
+            .collection("users")
+            .document(userId)
+            .collection("breaks")
+            .document("current")
+            .setData([
                 "startTime": FieldValue.serverTimestamp(),
                 "status": "running",
                 "breakTaken": true
-            ])
+            ], merge: true)
+    }
+    
+    func migrateBreakDocumentIfNeeded(userId: String) async throws {
+        
+        let snapshot = try await db
+            .collection("users")
+            .document(userId)
+            .collection("breaks")
+            .document("current")
+            .getDocument()
+        
+        guard let data = snapshot.data() else { return }
+        
+        let duration = data["duration"] as? Double ?? 0
+        
+        // ✅ Only write if duration is missing or zero
+        guard duration == 0 else { return }
+        
+        try await db
+            .collection("users")
+            .document(userId)
+            .collection("breaks")
+            .document("current")
+            .setData(["duration": 900], merge: true)
     }
     
     // MARK: Observe Break (Realtime)
@@ -33,13 +70,17 @@ final class FirebaseBreakService {
         userId: String,
         onChange: @escaping (Break?) -> Void
     ) {
-        
         listener = db
             .collection("users")
             .document(userId)
             .collection("breaks")
             .document("current")
             .addSnapshotListener { snapshot, error in
+                
+                // ✅ Skip optimistic local write — wait for server confirmation
+                if snapshot?.metadata.hasPendingWrites == true {
+                    return
+                }
                 
                 guard let data = snapshot?.data() else {
                     onChange(nil)
@@ -111,7 +152,7 @@ final class FirebaseBreakService {
     
     
     func resetBreak(userId: String) async throws {
-
+        
         try await db
             .collection("users")
             .document(userId)

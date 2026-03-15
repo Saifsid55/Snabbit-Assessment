@@ -80,6 +80,7 @@ final class BreakViewModel: BreakViewModelProtocol {
             case "running":
                 self.state = .running
                 self.startTimer()
+                self.updateTime()
                 
             case "ended":
                 self.state = .ended
@@ -165,6 +166,7 @@ final class BreakViewModel: BreakViewModelProtocol {
         
         guard let breakModel else { return }
         guard let startTime = breakModel.startTime else { return }
+        guard breakModel.duration > 0 else { return }
         
         let endTime = startTime.addingTimeInterval(breakModel.duration)
         let remaining = endTime.timeIntervalSinceNow
@@ -211,6 +213,7 @@ final class BreakViewModel: BreakViewModelProtocol {
         case "running":
             state = .running
             startTimer()
+            updateTime()
             
         case "ended":
             state = .ended
@@ -222,12 +225,13 @@ final class BreakViewModel: BreakViewModelProtocol {
         }
     }
     
+    
     // MARK: - View State Builder
     
     private func sendStateUpdate(time: String, progress: Float) {
         
         let endTimeText: String
-
+        
         if let breakModel,
            let startTime = breakModel.startTime {
             
@@ -250,7 +254,7 @@ final class BreakViewModel: BreakViewModelProtocol {
         let buttonColor: UIColor
         let timelineState: TimelineState
         var titleText: String
-
+        
         switch state {
             
         case .notStarted:

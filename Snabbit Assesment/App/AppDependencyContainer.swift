@@ -43,7 +43,7 @@ final class AppDependencyContainer {
     }
     
     
-    private func makeQuestionnaireRepository() -> QuestionnaireRepositoryProtocol {
+    func makeQuestionnaireRepository() -> QuestionnaireRepositoryProtocol {
         
         guard let userId = authService.currentUserId() else {
             fatalError("User not logged in")

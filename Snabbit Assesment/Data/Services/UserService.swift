@@ -71,6 +71,31 @@ final class UserService {
                 "email": email,
                 "username": username,
                 "createdAt": Timestamp()
+            ]) { [weak self] error in
+                
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+                
+                // ✅ Initialize break document after user profile is saved
+                self?.initializeBreakDocument(uid: uid, completion: completion)
+            }
+    }
+    
+    private func initializeBreakDocument(
+        uid: String,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        
+        db.collection("users")
+            .document(uid)
+            .collection("breaks")
+            .document("current")
+            .setData([
+                "duration": 900,
+                "status": "not_started",
+                "breakTaken": false
             ]) { error in
                 
                 if let error = error {

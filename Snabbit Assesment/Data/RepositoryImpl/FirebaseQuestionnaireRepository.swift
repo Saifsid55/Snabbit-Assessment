@@ -38,4 +38,10 @@ final class QuestionnaireRepository: QuestionnaireRepositoryProtocol {
             completion: completion
         )
     }
+    
+    func hasSubmittedQuestionnaire() async throws -> Bool {
+        return try await service.hasSubmittedQuestionnaire(
+               userId: userId
+           )
+    }
 }

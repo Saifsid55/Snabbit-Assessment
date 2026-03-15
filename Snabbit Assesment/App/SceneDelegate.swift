@@ -24,24 +24,42 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         window = UIWindow(windowScene: windowScene)
         
-        let rootViewController: UIViewController
-        
-        // 🔐 Check Firebase login session
-        if Auth.auth().currentUser != nil {
-            
-            // User already logged in → go to Break Screen
-            rootViewController = appContainer.makeBreakViewController()
-            
-        } else {
-            
-            // User not logged in → go to Login Screen
-            rootViewController = appContainer.makeLoginViewController()
-        }
-        
-        let navigationController = UINavigationController(rootViewController: rootViewController)
-        
+        let navigationController = UINavigationController()
         window?.rootViewController = navigationController
         window?.makeKeyAndVisible()
+        
+        Task { [weak self] in
+            guard let self else { return }
+            
+            if Auth.auth().currentUser == nil {
+                
+                let loginVC = self.appContainer.makeLoginViewController()
+                navigationController.setViewControllers([loginVC], animated: false)
+                return
+            }
+            
+            do {
+                
+                let repository = self.appContainer.makeQuestionnaireRepository()
+                let hasAnswered = try await repository.hasSubmittedQuestionnaire()
+                
+                if hasAnswered {
+                    
+                    let breakVC = self.appContainer.makeBreakViewController()
+                    navigationController.setViewControllers([breakVC], animated: false)
+                    
+                } else {
+                    
+                    let questionnaireVC = self.appContainer.makeQuestionnaireViewController()
+                    navigationController.setViewControllers([questionnaireVC], animated: false)
+                }
+                
+            } catch {
+                
+                let loginVC = self.appContainer.makeLoginViewController()
+                navigationController.setViewControllers([loginVC], animated: false)
+            }
+        }
     }
     
     func sceneDidDisconnect(_ scene: UIScene) {

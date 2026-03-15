@@ -19,7 +19,10 @@ final class BreakRepository: BreakRepositoryProtocol {
     func observeBreak(
         onChange: @escaping (Break?) -> Void
     ) {
-        service.observeBreak(userId: userId, onChange: onChange)
+        Task {
+            try? await service.migrateBreakDocumentIfNeeded(userId: userId)
+            service.observeBreak(userId: userId, onChange: onChange)
+        }
     }
     
     func startBreak() async throws {

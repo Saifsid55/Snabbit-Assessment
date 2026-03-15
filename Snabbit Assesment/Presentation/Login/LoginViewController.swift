@@ -23,10 +23,7 @@ final class LoginViewController: UIViewController {
     private let continueButton = UIButton()
     private let signupButton = UIButton()
     
-    let tap = UITapGestureRecognizer(
-        target: LoginViewController.self,
-        action: #selector(dismissKeyboard)
-    )
+    
     
     init(viewModel: LoginViewModelProtocol,
          container: AppDependencyContainer) {
@@ -34,7 +31,6 @@ final class LoginViewController: UIViewController {
         self.viewModel = viewModel
         self.container = container
         super.init(nibName: nil, bundle: nil)
-        view.addGestureRecognizer(tap)
     }
     
     required init?(coder: NSCoder) {
@@ -46,8 +42,13 @@ final class LoginViewController: UIViewController {
         
         view.backgroundColor = .white
         
+        
+        let tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        view.addGestureRecognizer(tap)
+        
         setupUI()
         bindViewModel()
+        
     }
 }
 
