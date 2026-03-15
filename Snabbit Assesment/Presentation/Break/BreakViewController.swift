@@ -9,33 +9,103 @@ import UIKit
 
 final class BreakViewController: UIViewController {
     
-    // MARK: - ViewModel & Container
+    // MARK: - Constants
+    private enum Constants {
+        
+        enum Assets {
+            static let headerBackground = "breakHeaderBG"
+        }
+        
+        enum Strings {
+            static let errorTitle        = "Error"
+            static let errorActionTitle  = "OK"
+            static let confirmEndKey     = "confirm_end"
+            static func greeting(_ name: String) -> String { "Hi, \(name)!" }
+        }
+        
+        enum Layout {
+            static let headerBackgroundHeight: CGFloat = 280
+            static let headerHeight: CGFloat           = 44
+            static let headerHorizontalPadding: CGFloat = 20
+            static let scrollViewTopSpacing: CGFloat   = 16
+            static let contentTopSpacing: CGFloat      = 16
+            static let contentHorizontalPadding: CGFloat = 20
+            static let contentStackWidth: CGFloat      = -40
+        }
+        
+        enum Typography {
+            static let greetingFontSize: CGFloat = 14
+            static let titleFontSize: CGFloat    = 24
+        }
+        
+        enum Spacing {
+            static let greetingStack: CGFloat = 4
+            static let contentStack: CGFloat  = 24
+        }
+    }
     
+    // MARK: - ViewModel & Container
     private let viewModel: BreakViewModelProtocol
     private let container: AppDependencyContainer
     
-    // MARK: - UI Components
+    // MARK: - Computed Views
+    private lazy var headerBackgroundImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.image = UIImage(named: Constants.Assets.headerBackground)
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
     
-    private let headerBackgroundImageView = UIImageView()
-    private let headerView = BreakHeaderView()
+    private lazy var headerView: BreakHeaderView = {
+        let view = BreakHeaderView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
     
-    private let greetingLabel = UILabel()
-    private let titleLabel = UILabel()
-    private let greetingStack = UIStackView()
+    private lazy var greetingLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: Constants.Typography.greetingFontSize, weight: .regular)
+        label.textColor = .white
+        return label
+    }()
     
-    private let scrollView = UIScrollView()
+    private lazy var titleLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: Constants.Typography.titleFontSize, weight: .bold)
+        label.textColor = .white
+        return label
+    }()
     
-    private let timerCardView = BreakTimerCardView()
-    private let timelineView = TimelineStatusView()
+    private lazy var greetingStack: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.spacing = Constants.Spacing.greetingStack
+        stack.alignment = .leading
+        return stack
+    }()
     
-    private let contentStack = UIStackView()
+    private lazy var scrollView: UIScrollView = {
+        let scrollView = UIScrollView()
+        scrollView.backgroundColor = .clear
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        return scrollView
+    }()
+    
+    private var timerCardView = BreakTimerCardView()
+    private var timelineView = TimelineStatusView()
+    
+    private lazy var contentStack: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.spacing = Constants.Spacing.contentStack
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
     
     // MARK: - Init
-    
-    init(
-        viewModel: BreakViewModelProtocol,
-        container: AppDependencyContainer
-    ) {
+    init(viewModel: BreakViewModelProtocol, container: AppDependencyContainer) {
         self.viewModel = viewModel
         self.container = container
         super.init(nibName: nil, bundle: nil)
@@ -46,36 +116,28 @@ final class BreakViewController: UIViewController {
     }
     
     // MARK: - Lifecycle
-    
     override func viewDidLoad() {
         super.viewDidLoad()
-        
         view.backgroundColor = .systemBackground
-        
         setupLayout()
-        bindViewModel()
         setupActions()
-        viewModel.viewDidLoad()
+        viewModel.delegate = self
+        Task { await viewModel.loadData() }
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(true, animated: false)
-        viewModel.refreshState()
+        Task { await viewModel.refreshState() }
     }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        // Pause ripple so it restarts properly on viewWillAppear
         timerCardView.successView.stopRippleAnimation()
     }
-
 }
 
-//
 // MARK: - Layout
-//
-
 private extension BreakViewController {
     
     func setupLayout() {
@@ -86,242 +148,148 @@ private extension BreakViewController {
         setupContent()
     }
     
+    func setupHeaderBackground() {
+        view.insertSubview(headerBackgroundImageView, at: 0)
+        NSLayoutConstraint.activate([
+            headerBackgroundImageView.topAnchor.constraint(equalTo: view.topAnchor),
+            headerBackgroundImageView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            headerBackgroundImageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            headerBackgroundImageView.heightAnchor.constraint(equalToConstant: Constants.Layout.headerBackgroundHeight)
+        ])
+    }
+    
     func setupHeaderView() {
-        
         view.addSubview(headerView)
-        
-        headerView.translatesAutoresizingMaskIntoConstraints = false
-        
+        headerView.delegate = self
         NSLayoutConstraint.activate([
             headerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            headerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            headerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            headerView.heightAnchor.constraint(equalToConstant: 44)
+            headerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: Constants.Layout.headerHorizontalPadding),
+            headerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -Constants.Layout.headerHorizontalPadding),
+            headerView.heightAnchor.constraint(equalToConstant: Constants.Layout.headerHeight)
         ])
-        
-        headerView.delegate = self
     }
     
     func setupScrollView() {
-        
         view.addSubview(scrollView)
-        
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.backgroundColor = .clear
-        
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 16),
+            scrollView.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: Constants.Layout.scrollViewTopSpacing),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
     
-    func setupHeaderBackground() {
-        
-        headerBackgroundImageView.image = UIImage(named: "breakHeaderBG")
-        headerBackgroundImageView.contentMode = .scaleAspectFill
-        headerBackgroundImageView.clipsToBounds = true
-        
-        view.insertSubview(headerBackgroundImageView, at: 0)
-        
-        headerBackgroundImageView.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            headerBackgroundImageView.topAnchor.constraint(equalTo: view.topAnchor),
-            headerBackgroundImageView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            headerBackgroundImageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            headerBackgroundImageView.heightAnchor.constraint(equalToConstant: 280)
-        ])
-    }
-    
     func setupGreeting() {
-        
-        greetingLabel.font = .systemFont(ofSize: 14, weight: .regular)
-        greetingLabel.textColor = .white
-        
-        titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
-        titleLabel.textColor = .white
-        
-        greetingStack.axis = .vertical
-        greetingStack.spacing = 4
-        greetingStack.alignment = .leading
-        
         greetingStack.addArrangedSubview(greetingLabel)
         greetingStack.addArrangedSubview(titleLabel)
     }
     
     func setupContent() {
-        
         scrollView.addSubview(contentStack)
-        
-        contentStack.axis = .vertical
-        contentStack.spacing = 24
-        contentStack.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            contentStack.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 16),
-            contentStack.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 20),
-            contentStack.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -20),
-            contentStack.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentStack.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40)
-        ])
-        
         contentStack.addArrangedSubview(greetingStack)
         contentStack.addArrangedSubview(timerCardView)
         contentStack.addArrangedSubview(timelineView)
+        NSLayoutConstraint.activate([
+            contentStack.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: Constants.Layout.contentTopSpacing),
+            contentStack.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: Constants.Layout.contentHorizontalPadding),
+            contentStack.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -Constants.Layout.contentHorizontalPadding),
+            contentStack.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+            contentStack.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: Constants.Layout.contentStackWidth)
+        ])
     }
 }
 
-//
 // MARK: - Actions
-//
-
 private extension BreakViewController {
     
     func setupActions() {
-        
-        timerCardView.endBreakButton.addTarget(
-            self,
-            action: #selector(didTapBreakButton),
-            for: .touchUpInside
-        )
+        timerCardView.endBreakButton.addTarget(self, action: #selector(didTapBreakButton), for: .touchUpInside)
     }
     
-    @objc
-    func didTapBreakButton() {
-        viewModel.didTapBreakButton()
+    @objc func didTapBreakButton() {
+        Task { await viewModel.didTapBreakButton() }
     }
 }
 
-//
-// MARK: - ViewModel Binding
-//
-
-private extension BreakViewController {
+// MARK: - BreakViewModelDelegate
+extension BreakViewController: BreakViewModelDelegate {
     
-    func bindViewModel() {
-        
-        viewModel.onStateChange = { [weak self] state in
-            
-            guard let self else { return }
-            
-            DispatchQueue.main.async {
-                
-                self.titleLabel.text = state.titleText
-                
-                self.timerCardView.timerView.update(
-                    time: state.timerText,
-                    progress: state.progress
-                )
-                
-                self.timerCardView.breakEndsLabel.text = state.breakEndsText
-                
-                self.timerCardView.endBreakButton.setTitle(
-                    state.buttonTitle,
-                    for: .normal
-                )
-                
-                self.timerCardView.endBreakButton.backgroundColor = state.buttonColor
-                
-                self.timelineView.update(state: state.timelineState)
-                
-                if state.breakEndsText.contains("--") {
-                    self.timerCardView.breakEndsLabel.isHidden = true
-                } else {
-                    self.timerCardView.breakEndsLabel.isHidden = false
-                }
-                
-                if state.isBreakFinished {
-                    
-                    self.timerCardView.showBreakFinishedState()
-                    
-                } else if state.timerText == "00:00" {
-                    // Break not started yet
-                    self.timerCardView.showPreBreakState()
-                    
-                } else {
-                    // Break running
-                    self.timerCardView.showTimerState()
-                }
+    func didUpdateState(_ state: BreakViewState) {
+        MainActor.assumeIsolated {
+            applyState(state)
+        }
+    }
+    
+    func didUpdateUsername(_ username: String) {
+        MainActor.assumeIsolated {
+            greetingLabel.text = Constants.Strings.greeting(username)
+        }
+    }
+    
+    func didReceiveError(_ error: String) {
+        MainActor.assumeIsolated {
+            if error == Constants.Strings.confirmEndKey {
+                showEndBreakConfirmation()
+            } else {
+                showError(message: error)
             }
         }
+    }
+    
+    private func applyState(_ state: BreakViewState) {
+        titleLabel.text = state.titleText
+        timerCardView.timerView.update(time: state.timerText, progress: state.progress)
+        timerCardView.breakEndsLabel.text = state.breakEndsText
+        timerCardView.breakEndsLabel.isHidden = state.breakEndsText.contains("--")
+        timerCardView.endBreakButton.setTitle(state.buttonTitle, for: .normal)
+        timerCardView.endBreakButton.backgroundColor = state.buttonColor
+        timelineView.update(state: state.timelineState)
         
-        viewModel.onError = { [weak self] error in
-            
-            guard let self else { return }
-            
-            DispatchQueue.main.async {
-                
-                if error == "confirm_end" {
-                    self.showEndBreakConfirmation()
-                } else {
-                    self.showError(message: error)
-                }
-            }
-        }
-        
-        viewModel.onUsernameUpdate = { [weak self] username in
-            
-            DispatchQueue.main.async {
-                self?.greetingLabel.text = "Hi, \(username)!"
-            }
+        if state.isBreakFinished {
+            timerCardView.showBreakFinishedState()
+        } else if state.timerText == "00:00" {
+            timerCardView.showPreBreakState()
+        } else {
+            timerCardView.showTimerState()
         }
     }
 }
 
-//
 // MARK: - End Break Confirmation
-//
-
 private extension BreakViewController {
     
     func showEndBreakConfirmation() {
-        
         let sheet = EndBreakBottomSheetViewController()
         sheet.modalPresentationStyle = .overFullScreen
-        
         sheet.onEndNow = { [weak self] in
-            self?.viewModel.endBreakEarly()
+            Task { await self?.viewModel.endBreakEarly() }
         }
-        
         present(sheet, animated: true)
     }
 }
 
-//
 // MARK: - Error
-//
-
 private extension BreakViewController {
     
     func showError(message: String) {
-        
         let alert = UIAlertController(
-            title: "Error",
+            title: Constants.Strings.errorTitle,
             message: message,
             preferredStyle: .alert
         )
-        
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        
+        alert.addAction(UIAlertAction(title: Constants.Strings.errorActionTitle, style: .default))
         present(alert, animated: true)
     }
 }
 
-//
-// MARK: - Header Delegate
-//
-
+// MARK: - BreakHeaderViewDelegate
 extension BreakViewController: BreakHeaderViewDelegate {
-
+    
     func didTapHelp() {
         let logoutVC = container.makeLogoutViewController()
-
         logoutVC.onResetSuccess = { [weak self] in
             self?.viewModel.didResetBreak()
         }
-
         navigationController?.pushViewController(logoutVC, animated: true)
     }
 }

@@ -9,27 +9,16 @@
 import Foundation
 
 protocol BreakViewModelProtocol: AnyObject {
-    
-    // MARK: - Binding
-    
-    var onStateChange: ((BreakViewState) -> Void)? { get set }
-    
-    var onError: ((String) -> Void)? { get set }
-    
-    var onUsernameUpdate: ((String) -> Void)? { get set }
-    
-    // MARK: - Actions
-    
-    func startBreak()
-    
-    func endBreakEarly()
-    
-    func refreshState()
-    
-    func didTapBreakButton()
-    
-    func viewDidLoad()
-    
+    var delegate: BreakViewModelDelegate? { get set }
+    func loadData() async
+    func refreshState() async
+    func didTapBreakButton() async
+    func endBreakEarly() async
     func didResetBreak()
+}
 
+protocol BreakViewModelDelegate: AnyObject {
+    func didUpdateState(_ state: BreakViewState)
+    func didUpdateUsername(_ username: String)
+    func didReceiveError(_ error: String)
 }

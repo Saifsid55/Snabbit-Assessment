@@ -7,54 +7,53 @@
 
 import Foundation
 
+protocol LoginViewModelDelegate: AnyObject {
+    func viewModelDidUpdateContinueState(_ isEnabled: Bool)
+    func viewModelDidLoginSuccessfully()
+    func viewModelDidFailWithError(_ message: String)
+}
+
 final class LoginViewModel: LoginViewModelProtocol {
-    
+    private enum Constants {
+        static let minUsernameLength = 1
+        static let minPasswordLength = 1
+    }
+
+    weak var delegate: LoginViewModelDelegate?
     private let loginUseCase: LoginUseCase
-    
-    var isContinueEnabled: ((Bool) -> Void)?
-    var onLoginSuccess: (() -> Void)?
-    var onError: ((String) -> Void)?
-    
     private var username = ""
     private var password = ""
-    
+
     init(loginUseCase: LoginUseCase) {
         self.loginUseCase = loginUseCase
     }
-    
+
     func updateUsername(_ username: String) {
         self.username = username
         validate()
     }
-    
+
     func updatePassword(_ password: String) {
         self.password = password
         validate()
     }
-    
-    private func validate() {
-        let isValid = !username.isEmpty && !password.isEmpty
-        isContinueEnabled?(isValid)
-    }
-    
+
     func login() {
-        
-        loginUseCase.execute(
-            email: username,
-            password: password
-        ) { [weak self] result in
-            
+        loginUseCase.execute(email: username, password: password) { [weak self] result in
             DispatchQueue.main.async {
-                
                 switch result {
-                    
                 case .success:
-                    self?.onLoginSuccess?()
-                    
+                    self?.delegate?.viewModelDidLoginSuccessfully()
                 case .failure(let error):
-                    self?.onError?(error.localizedDescription)
+                    self?.delegate?.viewModelDidFailWithError(error.localizedDescription)
                 }
             }
         }
+    }
+
+    private func validate() {
+        let isValid = username.count >= Constants.minUsernameLength
+            && password.count >= Constants.minPasswordLength
+        delegate?.viewModelDidUpdateContinueState(isValid)
     }
 }
