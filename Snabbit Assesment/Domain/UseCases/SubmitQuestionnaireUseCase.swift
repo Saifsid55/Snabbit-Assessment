@@ -8,11 +8,7 @@
 import Foundation
 
 protocol SubmitQuestionnaireUseCaseProtocol {
-    
-    func execute(
-        state: QuestionnaireState,
-        completion: @escaping (Result<Void, Error>) -> Void
-    )
+    func execute(state: QuestionnaireState) async throws
 }
 
 final class SubmitQuestionnaireUseCase: SubmitQuestionnaireUseCaseProtocol {
@@ -23,13 +19,7 @@ final class SubmitQuestionnaireUseCase: SubmitQuestionnaireUseCaseProtocol {
         self.repository = repository
     }
     
-    func execute(
-        state: QuestionnaireState,
-        completion: @escaping (Result<Void, Error>) -> Void
-    ) {
-        repository.submitResponses(
-            state: state,
-            completion: completion
-        )
+    func execute(state: QuestionnaireState) async throws {
+        try await repository.submitResponses(state: state)
     }
 }

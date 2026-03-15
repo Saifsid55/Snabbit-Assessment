@@ -8,15 +8,7 @@
 import Foundation
 
 protocol QuestionnaireRepositoryProtocol {
-    
-    func fetchQuestions(
-        completion: @escaping (Result<[QuestionnaireQuestion], Error>) -> Void
-    )
-    
-    func submitResponses(
-        state: QuestionnaireState,
-        completion: @escaping (Result<Void, Error>) -> Void
-    )
-    
+    func fetchQuestions() async throws -> [QuestionnaireQuestion]
+    func submitResponses(state: QuestionnaireState) async throws
     func hasSubmittedQuestionnaire() async throws -> Bool
 }

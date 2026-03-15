@@ -8,10 +8,7 @@
 import Foundation
 
 protocol FetchQuestionnaireUseCaseProtocol {
-    
-    func execute(
-        completion: @escaping (Result<[QuestionnaireQuestion], Error>) -> Void
-    )
+    func execute() async throws -> [QuestionnaireQuestion]
 }
 
 final class FetchQuestionnaireUseCase: FetchQuestionnaireUseCaseProtocol {
@@ -22,9 +19,7 @@ final class FetchQuestionnaireUseCase: FetchQuestionnaireUseCaseProtocol {
         self.repository = repository
     }
     
-    func execute(
-        completion: @escaping (Result<[QuestionnaireQuestion], Error>) -> Void
-    ) {
-        repository.fetchQuestions(completion: completion)
+    func execute() async throws -> [QuestionnaireQuestion] {
+        try await repository.fetchQuestions()
     }
 }

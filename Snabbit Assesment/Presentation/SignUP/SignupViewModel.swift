@@ -1,20 +1,9 @@
-//
-//  SignupViewController.swift
-//  Snabbit Assesment
-//
-//  Created by Muhammad Saif on 14/03/26.
-//
-
 import Foundation
 
 final class SignupViewModel: SignupViewModelProtocol {
+    weak var delegate: SignupViewModelDelegate?
     
     private let signupUseCase: SignupUseCase
-    
-    var isSignupEnabled: ((Bool) -> Void)?
-    var onSignupSuccess: (() -> Void)?
-    var onError: ((String) -> Void)?
-    
     private var email = ""
     private var username = ""
     private var password = ""
@@ -39,46 +28,33 @@ final class SignupViewModel: SignupViewModelProtocol {
         validate()
     }
     
-    func updateConfirmPassword(_ password: String) {
-        self.confirmPassword = password
+    func updateConfirmPassword(_ confirmPassword: String) {
+        self.confirmPassword = confirmPassword
         validate()
     }
     
     func signup() {
-        
         guard password == confirmPassword else {
-            onError?("Passwords do not match")
+            delegate?.viewModelDidFailWithError("Passwords do not match")
             return
         }
-        
-        signupUseCase.execute(
-            email: email,
-            username: username,
-            password: password
-        ) { [weak self] result in
-            
+        signupUseCase.execute(email: email, username: username, password: password) { [weak self] result in
             DispatchQueue.main.async {
-                
                 switch result {
-                    
                 case .success:
-                    self?.onSignupSuccess?()
-                    
+                    self?.delegate?.viewModelDidSignupSuccessfully()
                 case .failure(let error):
-                    self?.onError?(error.localizedDescription)
+                    self?.delegate?.viewModelDidFailWithError(error.localizedDescription)
                 }
             }
         }
     }
     
     private func validate() {
-        
-        let isValid =
-        !email.isEmpty &&
-        !username.isEmpty &&
-        !password.isEmpty &&
-        password == confirmPassword
-        
-        isSignupEnabled?(isValid)
+        let isValid = !email.isEmpty
+        && !username.isEmpty
+        && !password.isEmpty
+        && password == confirmPassword
+        delegate?.viewModelDidUpdateSignupState(isValid)
     }
 }

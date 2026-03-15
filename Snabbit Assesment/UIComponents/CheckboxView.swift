@@ -115,4 +115,3 @@ private extension CheckboxView {
         onToggle?()
     }
 }
- 

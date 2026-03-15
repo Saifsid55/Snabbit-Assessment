@@ -94,12 +94,24 @@ final class BreakViewController: UIViewController {
     }()
     
     private var timerCardView = BreakTimerCardView()
-    private var timelineView = TimelineStatusView()
+    
+    private lazy var timelineView: TimelineStatusView = {
+        let view = TimelineStatusView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    private lazy var timelineContainerView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
     
     private lazy var contentStack: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
         stack.spacing = Constants.Spacing.contentStack
+        stack.alignment = .fill
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -185,16 +197,27 @@ private extension BreakViewController {
     }
     
     func setupContent() {
+        timelineContainerView.addSubview(timelineView)
+        timelineView.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            timelineView.centerXAnchor.constraint(equalTo: timelineContainerView.centerXAnchor),
+            timelineView.topAnchor.constraint(equalTo: timelineContainerView.topAnchor),
+            timelineView.bottomAnchor.constraint(equalTo: timelineContainerView.bottomAnchor)
+        ])
+        
         scrollView.addSubview(contentStack)
         contentStack.addArrangedSubview(greetingStack)
         contentStack.addArrangedSubview(timerCardView)
-        contentStack.addArrangedSubview(timelineView)
+        contentStack.addArrangedSubview(timelineContainerView)
+        
         NSLayoutConstraint.activate([
             contentStack.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: Constants.Layout.contentTopSpacing),
             contentStack.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: Constants.Layout.contentHorizontalPadding),
             contentStack.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -Constants.Layout.contentHorizontalPadding),
             contentStack.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentStack.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: Constants.Layout.contentStackWidth)
+            contentStack.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: Constants.Layout.contentStackWidth),
+            timelineContainerView.widthAnchor.constraint(equalTo: contentStack.widthAnchor)
         ])
     }
 }
@@ -261,10 +284,14 @@ private extension BreakViewController {
     func showEndBreakConfirmation() {
         let sheet = EndBreakBottomSheetViewController()
         sheet.modalPresentationStyle = .overFullScreen
-        sheet.onEndNow = { [weak self] in
-            Task { await self?.viewModel.endBreakEarly() }
-        }
+        sheet.delegate = self
         present(sheet, animated: true)
+    }
+}
+
+extension BreakViewController: EndBreakBottomSheetDelegate {
+    func endBreakBottomSheetDidTapEndNow(_ sheet: EndBreakBottomSheetViewController) {
+        Task { await viewModel.endBreakEarly() }
     }
 }
 

@@ -7,182 +7,164 @@
 
 import UIKit
 
+protocol EndBreakBottomSheetDelegate: AnyObject {
+    func endBreakBottomSheetDidTapEndNow(_ sheet: EndBreakBottomSheetViewController)
+}
+
 final class EndBreakBottomSheetViewController: UIViewController {
+    private enum Constants {
+        static let containerHeight: CGFloat = 260
+        static let containerRadius: CGFloat = 20
+        static let handleWidth: CGFloat = 40
+        static let handleHeight: CGFloat = 5
+        static let handleRadius: CGFloat = 2.5
+        static let handleTopInset: CGFloat = 8
+        static let stackSpacing: CGFloat = 20
+        static let buttonStackSpacing: CGFloat = 12
+        static let buttonHeight: CGFloat = 44
+        static let buttonRadius: CGFloat = 10
+        static let stackInset: CGFloat = 24
+        static let stackHorizontalInset: CGFloat = 20
+        static let titleFontSize: CGFloat = 20
+        static let slideOffset: CGFloat = 300
+        static let appearDuration: CGFloat = 0.35
+        static let dismissDuration: CGFloat = 0.25
+        static let overlayAlpha: CGFloat = 0.3
+        static let titleText = "Ending break early?"
+        static let messageText = "Are you sure you want to end your break now? Take this time to recharge before your next task."
+        static let continueTitle = "Continue"
+        static let endNowTitle = "End now"
+        static let endNowBorderWidth: CGFloat = 1
+    }
     
-    var onEndNow: (() -> Void)?
+    weak var delegate: EndBreakBottomSheetDelegate?
     
-    private let containerView = UIView()
-    private let titleLabel = UILabel()
-    private let messageLabel = UILabel()
+    private lazy var containerView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .white
+        view.layer.cornerRadius = Constants.containerRadius
+        view.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+        view.clipsToBounds = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
     
-    private let continueButton = UIButton()
-    private let endNowButton = UIButton()
+    private lazy var handle: UIView = {
+        let view = UIView()
+        view.backgroundColor = .systemGray3
+        view.layer.cornerRadius = Constants.handleRadius
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    private lazy var titleLabel: UILabel = {
+        let label = UILabel()
+        label.text = Constants.titleText
+        label.font = .systemFont(ofSize: Constants.titleFontSize, weight: .semibold)
+        label.textAlignment = .center
+        return label
+    }()
+    
+    private lazy var messageLabel: UILabel = {
+        let label = UILabel()
+        label.text = Constants.messageText
+        label.numberOfLines = 0
+        label.textAlignment = .center
+        label.textColor = .darkGray
+        return label
+    }()
+    
+    private lazy var continueButton: UIButton = {
+        let button = UIButton()
+        button.setTitle(Constants.continueTitle, for: .normal)
+        button.backgroundColor = .systemGreen
+        button.layer.cornerRadius = Constants.buttonRadius
+        button.addTarget(self, action: #selector(dismissSheet), for: .touchUpInside)
+        return button
+    }()
+    
+    private lazy var endNowButton: UIButton = {
+        let button = UIButton()
+        button.setTitle(Constants.endNowTitle, for: .normal)
+        button.setTitleColor(.systemRed, for: .normal)
+        button.layer.borderColor = UIColor.systemRed.cgColor
+        button.layer.borderWidth = Constants.endNowBorderWidth
+        button.layer.cornerRadius = Constants.buttonRadius
+        button.addTarget(self, action: #selector(endNowTapped), for: .touchUpInside)
+        return button
+    }()
+    
+    private lazy var buttonStack: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [continueButton, endNowButton])
+        stack.axis = .horizontal
+        stack.spacing = Constants.buttonStackSpacing
+        stack.distribution = .fillEqually
+        return stack
+    }()
+    
+    private lazy var contentStack: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [titleLabel, messageLabel, buttonStack])
+        stack.axis = .vertical
+        stack.spacing = Constants.stackSpacing
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        setupBackground()
-        setupContainer()
-        setupContent()
+        setupUI()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-
-        containerView.transform = CGAffineTransform(translationX: 0, y: 300)
+        containerView.transform = CGAffineTransform(translationX: 0, y: Constants.slideOffset)
     }
+    
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        animateSheet()
-    }
-    
-    
-    private func animateSheet() {
-        
-        UIView.animate(withDuration: 0.35) {
-            self.view.backgroundColor = UIColor.black.withAlphaComponent(0.3)
+        UIView.animate(withDuration: Constants.appearDuration) {
+            self.view.backgroundColor = UIColor.black.withAlphaComponent(Constants.overlayAlpha)
             self.containerView.transform = .identity
         }
     }
-    
-    private func setupBackground() {
-        
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.0)
-        
-        let tap = UITapGestureRecognizer(
-            target: self,
-            action: #selector(dismissSheet)
-        )
-        
-        view.addGestureRecognizer(tap)
-    }
-    
-    private func setupContainer() {
-        
-        containerView.backgroundColor = .white
-        containerView.layer.cornerRadius = 20
-        containerView.layer.maskedCorners = [
-            .layerMinXMinYCorner,
-            .layerMaxXMinYCorner
-        ]
-        containerView.clipsToBounds = true
-        
+}
+
+private extension EndBreakBottomSheetViewController {
+    func setupUI() {
+        view.backgroundColor = UIColor.black.withAlphaComponent(0)
+        view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(dismissSheet)))
         view.addSubview(containerView)
-        
-        containerView.translatesAutoresizingMaskIntoConstraints = false
-        
+        containerView.addSubview(handle)
+        containerView.addSubview(contentStack)
         NSLayoutConstraint.activate([
             containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             containerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            containerView.heightAnchor.constraint(equalToConstant: 260)
-        ])
-        
-        // Drag handle
-        let handle = UIView()
-        handle.backgroundColor = .systemGray3
-        handle.layer.cornerRadius = 2.5
-        
-        containerView.addSubview(handle)
-        
-        handle.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            handle.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 8),
+            containerView.heightAnchor.constraint(equalToConstant: Constants.containerHeight),
+            handle.topAnchor.constraint(equalTo: containerView.topAnchor, constant: Constants.handleTopInset),
             handle.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
-            handle.widthAnchor.constraint(equalToConstant: 40),
-            handle.heightAnchor.constraint(equalToConstant: 5)
+            handle.widthAnchor.constraint(equalToConstant: Constants.handleWidth),
+            handle.heightAnchor.constraint(equalToConstant: Constants.handleHeight),
+            contentStack.topAnchor.constraint(equalTo: containerView.topAnchor, constant: Constants.stackInset),
+            contentStack.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: Constants.stackHorizontalInset),
+            contentStack.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -Constants.stackHorizontalInset),
+            contentStack.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -Constants.stackInset),
+            continueButton.heightAnchor.constraint(equalToConstant: Constants.buttonHeight),
+            endNowButton.heightAnchor.constraint(equalToConstant: Constants.buttonHeight)
         ])
     }
     
-    private func setupContent() {
-        
-        titleLabel.text = "Ending break early?"
-        titleLabel.font = .systemFont(ofSize: 20, weight: .semibold)
-        titleLabel.textAlignment = .center
-        
-        messageLabel.text =
-        "Are you sure you want to end your break now? Take this time to recharge before your next task."
-        
-        messageLabel.numberOfLines = 0
-        messageLabel.textAlignment = .center
-        messageLabel.textColor = .darkGray
-        
-        continueButton.setTitle("Continue", for: .normal)
-        continueButton.backgroundColor = UIColor.systemGreen
-        continueButton.layer.cornerRadius = 10
-        
-        endNowButton.setTitle("End now", for: .normal)
-        endNowButton.setTitleColor(.systemRed, for: .normal)
-        endNowButton.layer.borderColor = UIColor.systemRed.cgColor
-        endNowButton.layer.borderWidth = 1
-        endNowButton.layer.cornerRadius = 10
-        
-        continueButton.addTarget(
-            self,
-            action: #selector(dismissSheet),
-            for: .touchUpInside
-        )
-        
-        endNowButton.addTarget(
-            self,
-            action: #selector(endNowTapped),
-            for: .touchUpInside
-        )
-        
-        let buttonStack = UIStackView(arrangedSubviews: [
-            continueButton,
-            endNowButton
-        ])
-        
-        buttonStack.axis = .horizontal
-        buttonStack.spacing = 12
-        buttonStack.distribution = .fillEqually
-        
-        let stack = UIStackView(arrangedSubviews: [
-            titleLabel,
-            messageLabel,
-            buttonStack
-        ])
-        
-        stack.axis = .vertical
-        stack.spacing = 20
-        
-        containerView.addSubview(stack)
-        
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            
-            stack.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 24),
-            stack.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 20),
-            stack.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -20),
-            stack.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -24),
-            
-            continueButton.heightAnchor.constraint(equalToConstant: 44),
-            endNowButton.heightAnchor.constraint(equalToConstant: 44)
-        ])
-    }
-    
-    @objc
-    private func dismissSheet() {
-        UIView.animate(withDuration: 0.25, animations: {
-            
-            self.view.backgroundColor = UIColor.black.withAlphaComponent(0.0)
-            
-            self.containerView.transform = CGAffineTransform(translationX: 0, y: 300)
-            
+    @objc func dismissSheet() {
+        UIView.animate(withDuration: Constants.dismissDuration, animations: {
+            self.view.backgroundColor = UIColor.black.withAlphaComponent(0)
+            self.containerView.transform = CGAffineTransform(translationX: 0, y: Constants.slideOffset)
         }) { _ in
-            
             self.dismiss(animated: false)
         }
     }
     
-    @objc
-    private func endNowTapped() {
-        
+    @objc func endNowTapped() {
         dismiss(animated: true)
-        
-        onEndNow?()
+        delegate?.endBreakBottomSheetDidTapEndNow(self)
     }
 }

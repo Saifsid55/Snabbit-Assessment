@@ -8,17 +8,45 @@
 import UIKit
 
 final class CircularTimerView: UIView {
+    private enum Constants {
+        static let gapAngle: CGFloat = .pi / 2.5
+        static let arcRadius: CGFloat = 70
+        static let arcLineWidth: CGFloat = 12
+        static let trackAlpha: CGFloat = 0.2
+        static let timeFontSize: CGFloat = 28
+        static let breakFontSize: CGFloat = 18
+        static let breakLabelAlpha: CGFloat = 0.85
+        static let breakLabelOffset: CGFloat = 68
+        static let timeLabelDefault = "00:00"
+        static let breakLabelText = "Break"
+    }
+    
+    private var currentProgress: Float = 1.0
+    private var startAngle: CGFloat { (.pi / 2) + (Constants.gapAngle / 2) }
+    private var endAngle: CGFloat { (.pi / 2) - (Constants.gapAngle / 2) + 2 * .pi }
     
     private let trackLayer = CAShapeLayer()
     private let progressLayer = CAShapeLayer()
-    private let timeLabel = UILabel()
-    private let breakLabel = UILabel()
-    private var currentProgress: Float = 1.0
     
-    private let gapAngle: CGFloat = .pi / 2.5
+    private lazy var timeLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: Constants.timeFontSize, weight: .bold)
+        label.textColor = .white
+        label.textAlignment = .center
+        label.text = Constants.timeLabelDefault
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
     
-    private var startAngle: CGFloat { (.pi / 2) + (gapAngle / 2) }
-    private var endAngle:   CGFloat { (.pi / 2) - (gapAngle / 2) + 2 * .pi }
+    private lazy var breakLabel: UILabel = {
+        let label = UILabel()
+        label.text = Constants.breakLabelText
+        label.font = .systemFont(ofSize: Constants.breakFontSize, weight: .semibold)
+        label.textColor = UIColor.white.withAlphaComponent(Constants.breakLabelAlpha)
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -31,71 +59,48 @@ final class CircularTimerView: UIView {
         super.layoutSubviews()
         setupLayers()
     }
-    
-    private func setupLayers() {
+}
+
+private extension CircularTimerView {
+    func setupLayers() {
         trackLayer.removeFromSuperlayer()
         progressLayer.removeFromSuperlayer()
-        
         let center = CGPoint(x: bounds.midX, y: bounds.midY)
-        let radius: CGFloat = 70
-        
         let arcPath = UIBezierPath(
             arcCenter: center,
-            radius: radius,
+            radius: Constants.arcRadius,
             startAngle: startAngle,
             endAngle: endAngle,
             clockwise: true
-        )
-        
-        // Track (dim background arc)
-        trackLayer.path = arcPath.cgPath
-        trackLayer.strokeColor = UIColor.white.withAlphaComponent(0.2).cgColor
-        trackLayer.lineWidth = 12
+        ).cgPath
+        trackLayer.path = arcPath
+        trackLayer.strokeColor = UIColor.white.withAlphaComponent(Constants.trackAlpha).cgColor
+        trackLayer.lineWidth = Constants.arcLineWidth
         trackLayer.fillColor = UIColor.clear.cgColor
         trackLayer.lineCap = .round
         layer.insertSublayer(trackLayer, at: 0)
-        
-        // Progress (white foreground arc, drains as time passes)
-        progressLayer.path = arcPath.cgPath
+        progressLayer.path = arcPath
         progressLayer.strokeColor = UIColor.white.cgColor
-        progressLayer.lineWidth = 12
+        progressLayer.lineWidth = Constants.arcLineWidth
         progressLayer.fillColor = UIColor.clear.cgColor
         progressLayer.lineCap = .round
         progressLayer.strokeEnd = CGFloat(currentProgress)
         layer.insertSublayer(progressLayer, at: 1)
     }
     
-    private func setupLabels() {
-        // Time in the center
-        timeLabel.font = .systemFont(ofSize: 28, weight: .bold)
-        timeLabel.textColor = .white
-        timeLabel.textAlignment = .center
-        timeLabel.text = "00:00"
-        
-        // "Break" in the bottom gap between arc ends
-        breakLabel.text = "Break"
-        breakLabel.font = .systemFont(ofSize: 18, weight: .semibold)
-        breakLabel.textColor = UIColor.white.withAlphaComponent(0.85)
-        breakLabel.textAlignment = .center
-        
+    func setupLabels() {
         addSubview(timeLabel)
         addSubview(breakLabel)
-        
-        timeLabel.translatesAutoresizingMaskIntoConstraints = false
-        breakLabel.translatesAutoresizingMaskIntoConstraints = false
-        
         NSLayoutConstraint.activate([
-            // Time label: center of the circle
             timeLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
             timeLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-            
-            // Break label: sits in the gap at the bottom
-            // radius(70) * sin(60°) ≈ 61pts below center
             breakLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
-            breakLabel.centerYAnchor.constraint(equalTo: centerYAnchor, constant: 68)
+            breakLabel.centerYAnchor.constraint(equalTo: centerYAnchor, constant: Constants.breakLabelOffset)
         ])
     }
-    
+}
+
+extension CircularTimerView {
     func update(time: String, progress: Float) {
         timeLabel.text = time
         currentProgress = 1.0 - progress

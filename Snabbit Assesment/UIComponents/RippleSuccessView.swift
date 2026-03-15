@@ -12,7 +12,7 @@ final class RippleSuccessView: UIView {
     private let checkCircle = UIView()
     private let checkmark = UIImageView()
     
-    private var rippleLayers: [CAShapeLayer] = [] 
+    private var rippleLayers: [CAShapeLayer] = []
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -39,7 +39,7 @@ final class RippleSuccessView: UIView {
             checkCircle.heightAnchor.constraint(equalToConstant: 100)
         ])
         
-        checkmark.image = UIImage(systemName: "checkmark")
+        checkmark.image = UIImage(named: "checkMark")
         checkmark.tintColor = UIColor.systemBlue
         checkmark.contentMode = .scaleAspectFit
         
@@ -50,8 +50,8 @@ final class RippleSuccessView: UIView {
         NSLayoutConstraint.activate([
             checkmark.centerXAnchor.constraint(equalTo: checkCircle.centerXAnchor),
             checkmark.centerYAnchor.constraint(equalTo: checkCircle.centerYAnchor),
-            checkmark.widthAnchor.constraint(equalToConstant: 40),
-            checkmark.heightAnchor.constraint(equalToConstant: 40)
+            checkmark.widthAnchor.constraint(equalToConstant: 72),
+            checkmark.heightAnchor.constraint(equalToConstant: 72)
         ])
     }
     

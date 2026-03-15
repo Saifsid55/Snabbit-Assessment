@@ -240,9 +240,9 @@ private extension LoginViewController {
         field.layer.borderColor = Constants.fieldInactiveBorderColor
         field.layer.borderWidth = Constants.fieldBorderWidth
         field.layer.cornerRadius = Constants.fieldCornerRadius
-        field.leftView = UIView(frame: CGRect(x: 0, y: 0, width: Constants.fieldInset, height: 1))
+        field.leftView = UIView(frame: CGRect(x: .zero, y: .zero, width: Constants.fieldInset, height: 1))
         field.leftViewMode = .always
-        field.rightView = UIView(frame: CGRect(x: 0, y: 0, width: Constants.fieldInset, height: 1))
+        field.rightView = UIView(frame: CGRect(x: .zero, y: .zero, width: Constants.fieldInset, height: 1))
         field.rightViewMode = .always
         field.heightAnchor.constraint(equalToConstant: Constants.fieldHeight).isActive = true
         return field
@@ -382,8 +382,19 @@ extension LoginViewController: LoginViewModelDelegate {
     }
 
     func viewModelDidLoginSuccessfully() {
-        let questionnaireVC = container.makeQuestionnaireViewController()
-        navigationController?.setViewControllers([questionnaireVC], animated: true)
+        let repository = container.makeQuestionnaireRepository()
+        Task {
+            let hasAnsweredQuestions = try await repository.hasSubmittedQuestionnaire()
+            await MainActor.run {
+                if !hasAnsweredQuestions {
+                    let questionnaireVC = self.container.makeQuestionnaireViewController()
+                    self.navigationController?.setViewControllers([questionnaireVC], animated: true)
+                } else {
+                    let breakVC = self.container.makeBreakViewController()
+                    self.navigationController?.setViewControllers([breakVC], animated: true)
+                }
+            }
+        }
     }
 
     func viewModelDidFailWithError(_ message: String) {

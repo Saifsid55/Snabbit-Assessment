@@ -8,269 +8,262 @@
 import UIKit
 
 final class BreakTimerCardView: UIView {
+    private enum Constants {
+        static let cardCornerRadius: CGFloat = 16
+        static let stackSpacingDefault: CGFloat = 12
+        static let stackSpacingCompact: CGFloat = 8
+        static let stackHorizontalInset: CGFloat = 20
+        static let titleText = "We value your hard work! \n Take this time to relax"
+        static let titleFontSize: CGFloat = 18
+        static let timerSize: CGFloat = 300
+        static let timerWidth: CGFloat = 280
+        static let breakEndsText = "Break ends at --:-- --"
+        static let breakEndsAlpha: CGFloat = 0.85
+        static let breakEndsFontSize: CGFloat = 14
+        static let endBreakTitle = "End my break"
+        static let endBreakFontSize: CGFloat = 16
+        static let endBreakButtonHeight: CGFloat = 44
+        static let endBreakCornerRadius: CGFloat = 10
+        static let successViewSize: CGFloat = 180
+        static let breakFinishedText = "Hope you are feeling refreshed and ready to start working again"
+        static let breakFinishedFontSize: CGFloat = 16
+        static let spacerFixedHeight: CGFloat = 24
+        static let spacerCompactHeight: CGFloat = 8
+        static let backgroundImageName = "timerCardBG"
+        static let animationDurationShort: CGFloat = 0.25
+        static let animationDurationDefault: CGFloat = 0.35
+    }
     
-    var titleLabel: UILabel!
-    var timerView: CircularTimerView!
-    var breakEndsLabel: UILabel!
-    var endBreakButton: UIButton!
-    var stack: UIStackView!
-    var backgroundImageView: UIImageView!
-    var breakFinishedLabel: UILabel!
-    var successView: RippleSuccessView!
-    private var topSpacer: UIView!
-    private var bottomSpacer: UIView!
+    private enum CardDisplayState {
+        case preBreak, timer, finished
+    }
     
+    private var currentDisplayState: CardDisplayState?
     private var timerHeightConstraint: NSLayoutConstraint!
     private var endBreakButtonHeightConstraint: NSLayoutConstraint!
     private var spacerEqualHeightConstraint: NSLayoutConstraint!
     private var topSpacerFixedConstraint: NSLayoutConstraint!
     private var bottomSpacerFixedConstraint: NSLayoutConstraint!
     
-    private enum CardDisplayState {
-        case preBreak, timer, finished
-    }
-    private var currentDisplayState: CardDisplayState?
+    // MARK: - Views
     
+    private lazy var backgroundImageView: UIImageView = {
+        let iv = UIImageView()
+        iv.image = UIImage(named: Constants.backgroundImageName)
+        iv.contentMode = .scaleAspectFill
+        iv.clipsToBounds = true
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        iv.setContentHuggingPriority(.defaultLow, for: .vertical)
+        iv.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+        return iv
+    }()
+    
+    private lazy var topSpacer: UIView = {
+        let v = UIView()
+        v.translatesAutoresizingMaskIntoConstraints = false
+        return v
+    }()
+    
+    private lazy var bottomSpacer: UIView = {
+        let v = UIView()
+        v.translatesAutoresizingMaskIntoConstraints = false
+        return v
+    }()
+    
+    var titleLabel: UILabel = {
+        let label = UILabel()
+        label.text = Constants.titleText
+        label.textColor = .white
+        label.font = .systemFont(ofSize: Constants.titleFontSize, weight: .semibold)
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.setContentHuggingPriority(.required, for: .vertical)
+        return label
+    }()
+    
+    var timerView: CircularTimerView = {
+        let view = CircularTimerView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    var breakEndsLabel: UILabel = {
+        let label = UILabel()
+        label.text = Constants.breakEndsText
+        label.textColor = UIColor.white.withAlphaComponent(Constants.breakEndsAlpha)
+        label.font = .systemFont(ofSize: Constants.breakEndsFontSize, weight: .medium)
+        label.textAlignment = .center
+        label.isHidden = true
+        return label
+    }()
+    
+    var endBreakButton: UIButton = {
+        let button = UIButton()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.setTitle(Constants.endBreakTitle, for: .normal)
+        button.backgroundColor = .systemRed
+        button.layer.cornerRadius = Constants.endBreakCornerRadius
+        button.titleLabel?.font = .systemFont(ofSize: Constants.endBreakFontSize, weight: .semibold)
+        return button
+    }()
+    
+    var successView: RippleSuccessView = {
+        let view = RippleSuccessView()
+        view.isHidden = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    var breakFinishedLabel: UILabel = {
+        let label = UILabel()
+        label.text = Constants.breakFinishedText
+        label.textColor = .white
+        label.font = .systemFont(ofSize: Constants.breakFinishedFontSize, weight: .semibold)
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.isHidden = true
+        return label
+    }()
+    
+    var stack: UIStackView = {
+        let stack = UIStackView()
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        stack.axis = .vertical
+        stack.spacing = Constants.stackSpacingDefault
+        stack.alignment = .center
+        return stack
+    }()
+    
+    // MARK: - Init
     
     override init(frame: CGRect) {
         super.init(frame: frame)
-        
         setupUI()
     }
     
     required init?(coder: NSCoder) {
         fatalError()
     }
-    
-    override func layoutSubviews() {
-        super.layoutSubviews()
-    }
-    
-    private func setupUI() {
-        
-        layer.cornerRadius = 16
+}
+
+// MARK: - Setup
+
+private extension BreakTimerCardView {
+    func setupUI() {
+        layer.cornerRadius = Constants.cardCornerRadius
         clipsToBounds = true
-        
         setupBackground()
         setupStack()
-        createTitleLabel()
-        setupTimerView()
-        setupSuccessView()
-        setupBreakEndsLabel()
-        setupEndBreakButton()
-        setupBreakFinishedLabel()
+        setupConstraints()
     }
     
-    private func setupBackground() {
-        backgroundImageView = UIImageView()
-        backgroundImageView.image = UIImage(named: "timerCardBG")
-        backgroundImageView.contentMode = .scaleAspectFill
-        backgroundImageView.clipsToBounds = true
-        
+    func setupBackground() {
         insertSubview(backgroundImageView, at: 0)
-        backgroundImageView.translatesAutoresizingMaskIntoConstraints = false
-        
         NSLayoutConstraint.activate([
             backgroundImageView.topAnchor.constraint(equalTo: topAnchor),
             backgroundImageView.leadingAnchor.constraint(equalTo: leadingAnchor),
             backgroundImageView.trailingAnchor.constraint(equalTo: trailingAnchor),
             backgroundImageView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            
             backgroundImageView.heightAnchor.constraint(greaterThanOrEqualToConstant: 0)
         ])
-        
-        backgroundImageView.setContentHuggingPriority(.defaultLow, for: .vertical)
-        backgroundImageView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
     }
     
-    
-    private func setupStack() {
-        stack = UIStackView()
+    func setupStack() {
         addSubview(stack)
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        stack.axis = .vertical
-        stack.spacing = 12
-        stack.alignment = .center
+        stack.addArrangedSubview(topSpacer)
+        stack.addArrangedSubview(titleLabel)
+        stack.addArrangedSubview(timerView)
+        stack.addArrangedSubview(successView)
+        stack.addArrangedSubview(breakEndsLabel)
+        stack.addArrangedSubview(breakFinishedLabel)
+        stack.addArrangedSubview(endBreakButton)
+        stack.addArrangedSubview(bottomSpacer)
+    }
+    
+    func setupConstraints() {
+        timerHeightConstraint = timerView.heightAnchor.constraint(equalToConstant: Constants.timerSize)
+        endBreakButtonHeightConstraint = endBreakButton.heightAnchor.constraint(equalToConstant: Constants.endBreakButtonHeight)
+        spacerEqualHeightConstraint = topSpacer.heightAnchor.constraint(equalTo: bottomSpacer.heightAnchor)
+        topSpacerFixedConstraint = topSpacer.heightAnchor.constraint(equalToConstant: Constants.spacerFixedHeight)
+        bottomSpacerFixedConstraint = bottomSpacer.heightAnchor.constraint(equalToConstant: Constants.spacerFixedHeight)
+        spacerEqualHeightConstraint.isActive = true
         
         NSLayoutConstraint.activate([
             stack.topAnchor.constraint(equalTo: topAnchor),
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Constants.stackHorizontalInset),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Constants.stackHorizontalInset),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor),
-        ])
-        
-        topSpacer = UIView()
-        bottomSpacer = UIView()
-        topSpacer.translatesAutoresizingMaskIntoConstraints = false
-        bottomSpacer.translatesAutoresizingMaskIntoConstraints = false
-        
-        topSpacerFixedConstraint = topSpacer.heightAnchor.constraint(equalToConstant: 24)
-        bottomSpacerFixedConstraint = bottomSpacer.heightAnchor.constraint(equalToConstant: 24)
-        
-        stack.addArrangedSubview(topSpacer)
-    }
-    
-    private func createTitleLabel() {
-        titleLabel = UILabel()
-        titleLabel.text = "We value your hard work! \n Take this time to relax"
-        titleLabel.textColor = .white
-        titleLabel.font = .systemFont(ofSize: 18, weight: .semibold)
-        titleLabel.textAlignment = .center
-        titleLabel.numberOfLines = 0
-        titleLabel.setContentHuggingPriority(.required, for: .vertical)
-        
-        stack.addArrangedSubview(titleLabel)
-    }
-    
-    private func setupTimerView() {
-        timerView = CircularTimerView()
-        timerView.translatesAutoresizingMaskIntoConstraints = false
-        stack.addArrangedSubview(timerView)
-        
-        timerHeightConstraint = timerView.heightAnchor.constraint(equalToConstant: 300)
-        
-        NSLayoutConstraint.activate([
             timerHeightConstraint,
-            timerView.widthAnchor.constraint(equalToConstant: 280)
-        ])
-    }
-    
-    private func setupBreakEndsLabel() {
-        breakEndsLabel = UILabel()
-        breakEndsLabel.text = "Break ends at --:-- --"
-        breakEndsLabel.textColor = UIColor.white.withAlphaComponent(0.85)
-        breakEndsLabel.font = .systemFont(ofSize: 14, weight: .medium)
-        breakEndsLabel.textAlignment = .center
-        breakEndsLabel.isHidden = true
-        stack.addArrangedSubview(breakEndsLabel)
-    }
-    
-    private func setupEndBreakButton() {
-        endBreakButton = UIButton()
-        endBreakButton.translatesAutoresizingMaskIntoConstraints = false
-        endBreakButton.setTitle("End my break", for: .normal)
-        endBreakButton.backgroundColor = .systemRed
-        endBreakButton.layer.cornerRadius = 10
-        endBreakButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
-        
-        stack.addArrangedSubview(endBreakButton)
-        
-        endBreakButtonHeightConstraint = endBreakButton.heightAnchor.constraint(equalToConstant: 44)
-        NSLayoutConstraint.activate([
+            timerView.widthAnchor.constraint(equalToConstant: Constants.timerWidth),
             endBreakButtonHeightConstraint,
-            endBreakButton.widthAnchor.constraint(equalTo: stack.widthAnchor)
-        ])
-        
-        stack.addArrangedSubview(bottomSpacer)
-        
-        spacerEqualHeightConstraint = topSpacer.heightAnchor.constraint(equalTo: bottomSpacer.heightAnchor)
-        spacerEqualHeightConstraint.isActive = true
-    }
-    
-    private func setupSuccessView() {
-        
-        successView = RippleSuccessView()
-        successView.isHidden = true
-        
-        stack.addArrangedSubview(successView)
-        
-        successView.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            successView.widthAnchor.constraint(equalToConstant: 180),
-            successView.heightAnchor.constraint(equalToConstant: 180)
+            endBreakButton.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            successView.widthAnchor.constraint(equalToConstant: Constants.successViewSize),
+            successView.heightAnchor.constraint(equalToConstant: Constants.successViewSize)
         ])
     }
-    
-    private func setupBreakFinishedLabel() {
-        
-        breakFinishedLabel = UILabel()
-        breakFinishedLabel.text = "Hope you are feeling refreshed and ready to start working again"
-        breakFinishedLabel.textColor = .white
-        breakFinishedLabel.font = .systemFont(ofSize: 16, weight: .semibold)
-        breakFinishedLabel.textAlignment = .center
-        breakFinishedLabel.numberOfLines = 0
-        breakFinishedLabel.isHidden = true
-        
-        stack.insertArrangedSubview(breakFinishedLabel, at: stack.arrangedSubviews.count - 1)
-    }
-    
+}
+
+// MARK: - State
+
+extension BreakTimerCardView {
     func showPreBreakState() {
         guard currentDisplayState != .preBreak else { return }
         currentDisplayState = .preBreak
-        
-        stack.spacing = 8
-        
+        stack.spacing = Constants.stackSpacingCompact
         spacerEqualHeightConstraint.isActive = false
-        topSpacerFixedConstraint.constant = 8
-        bottomSpacerFixedConstraint.constant = 8
+        topSpacerFixedConstraint.constant = Constants.spacerCompactHeight
+        bottomSpacerFixedConstraint.constant = Constants.spacerCompactHeight
         topSpacerFixedConstraint.isActive = true
         bottomSpacerFixedConstraint.isActive = true
-        
         timerHeightConstraint.isActive = true
         endBreakButtonHeightConstraint.isActive = true
-        
         titleLabel.isHidden = false
         timerView.isHidden = false
         endBreakButton.isHidden = false
         breakEndsLabel.isHidden = true
-        
         successView.isHidden = true
         breakFinishedLabel.isHidden = true
-        successView.stopRippleAnimation()  // ← ensure clean state
-        
-        UIView.animate(withDuration: 0.25) { self.layoutIfNeeded() }
+        successView.stopRippleAnimation()
+        UIView.animate(withDuration: Constants.animationDurationShort) { self.layoutIfNeeded() }
     }
     
     func showTimerState() {
         guard currentDisplayState != .timer else { return }
         currentDisplayState = .timer
-        
-        stack.spacing = 12
-        
+        stack.spacing = Constants.stackSpacingDefault
         timerHeightConstraint.isActive = true
         endBreakButtonHeightConstraint.isActive = true
         topSpacerFixedConstraint.isActive = false
         bottomSpacerFixedConstraint.isActive = false
         spacerEqualHeightConstraint.isActive = true
-        
         titleLabel.isHidden = false
         timerView.isHidden = false
         endBreakButton.isHidden = false
         breakEndsLabel.isHidden = false
-        
         successView.isHidden = true
         breakFinishedLabel.isHidden = true
-        successView.stopRippleAnimation()  // ← stop before hiding
-        
-        UIView.animate(withDuration: 0.35) { self.layoutIfNeeded() }
+        successView.stopRippleAnimation()
+        UIView.animate(withDuration: Constants.animationDurationDefault) { self.layoutIfNeeded() }
     }
     
     func showBreakFinishedState() {
-        // Do NOT guard here — always restart animation on re-entry
         let isFirstEntry = currentDisplayState != .finished
         currentDisplayState = .finished
-        
         if isFirstEntry {
             timerHeightConstraint.isActive = false
             endBreakButtonHeightConstraint.isActive = false
             spacerEqualHeightConstraint.isActive = false
             topSpacerFixedConstraint.isActive = true
             bottomSpacerFixedConstraint.isActive = true
-            
             titleLabel.isHidden = true
             timerView.isHidden = true
             breakEndsLabel.isHidden = true
             endBreakButton.isHidden = true
             breakFinishedLabel.isHidden = false
             successView.isHidden = false
-            
-            UIView.animate(withDuration: 0.35) { self.layoutIfNeeded() }
+            UIView.animate(withDuration: Constants.animationDurationDefault) { self.layoutIfNeeded() }
         }
-        
-        // Always stop then restart — fixes the "back from logout" animation freeze
         successView.stopRippleAnimation()
-        successView.startRippleAnimation()  // ← clean restart every time
+        successView.startRippleAnimation()
     }
-    
 }

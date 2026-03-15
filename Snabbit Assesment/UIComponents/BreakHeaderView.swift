@@ -7,23 +7,140 @@
 
 import UIKit
 
-
 protocol BreakHeaderViewDelegate: AnyObject {
     func didTapHelp()
 }
 
 final class BreakHeaderView: UIView {
+    private enum Constants {
+        static let height: CGFloat = 44
+        static let helpText = "Help"
+        static let helpIcon = "phone.fill"
+        static let menuIcon = "line.3.horizontal"
+        static let coffeeImageName = "coffee"
+        static let borderRadius: CGFloat = 8
+        static let borderWidth: CGFloat = 1
+        static let borderAlpha: CGFloat = 0.7
+        static let iconSize: CGFloat = 16
+        static let coffeeIconSize: CGFloat = 20
+        static let coffeeViewWidth: CGFloat = 48
+        static let actionViewHeight: CGFloat = 36
+        static let innerStackSpacing: CGFloat = 6
+        static let rightStackSpacing: CGFloat = 12
+        static let horizontalInset: CGFloat = 14
+        static let helpFontSize: CGFloat = 15
+        static let menuIconSize: CGFloat = 20
+    }
     
-    private let menuButton = UIButton(type: .system)
-    
-    private let helpView = UIView()
-    private let helpImageView = UIImageView()
-    private let helpLabel = UILabel()
-    
-    private let coffeeIconView = UIView()
-    private let coffeeImageView = UIImageView()
-
     weak var delegate: BreakHeaderViewDelegate?
+    
+    // MARK: - Views
+    
+    private lazy var menuButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setImage(
+            UIImage(
+                systemName: Constants.menuIcon,
+                withConfiguration: UIImage.SymbolConfiguration(pointSize: Constants.menuIconSize, weight: .medium)
+            ),
+            for: .normal
+        )
+        button.tintColor = .white
+        return button
+    }()
+    
+    private lazy var helpImageView: UIImageView = {
+        let iv = UIImageView()
+        iv.image = UIImage(systemName: Constants.helpIcon)?.withRenderingMode(.alwaysTemplate)
+        iv.tintColor = .white
+        iv.contentMode = .scaleAspectFit
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            iv.widthAnchor.constraint(equalToConstant: Constants.iconSize),
+            iv.heightAnchor.constraint(equalToConstant: Constants.iconSize)
+        ])
+        return iv
+    }()
+    
+    private lazy var helpLabel: UILabel = {
+        let label = UILabel()
+        label.text = Constants.helpText
+        label.textColor = .white
+        label.font = .systemFont(ofSize: Constants.helpFontSize, weight: .regular)
+        return label
+    }()
+    
+    private lazy var helpInnerStack: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [helpImageView, helpLabel])
+        stack.axis = .horizontal
+        stack.spacing = Constants.innerStackSpacing
+        stack.alignment = .center
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+    
+    private lazy var helpView: UIView = {
+        let view = UIView()
+        view.layer.cornerRadius = Constants.borderRadius
+        view.layer.borderWidth = Constants.borderWidth
+        view.layer.borderColor = UIColor.white.withAlphaComponent(Constants.borderAlpha).cgColor
+        view.clipsToBounds = true
+        view.addSubview(helpInnerStack)
+        NSLayoutConstraint.activate([
+            helpInnerStack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            helpInnerStack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            helpInnerStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: Constants.horizontalInset),
+            helpInnerStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -Constants.horizontalInset)
+        ])
+        let gesture = UITapGestureRecognizer(target: self, action: #selector(helpTapped))
+        view.addGestureRecognizer(gesture)
+        return view
+    }()
+    
+    private lazy var coffeeImageView: UIImageView = {
+        let iv = UIImageView()
+        iv.image = UIImage(named: Constants.coffeeImageName)?.withRenderingMode(.alwaysTemplate)
+        iv.tintColor = .white
+        iv.contentMode = .scaleAspectFit
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            iv.widthAnchor.constraint(equalToConstant: Constants.coffeeIconSize),
+            iv.heightAnchor.constraint(equalToConstant: Constants.coffeeIconSize)
+        ])
+        return iv
+    }()
+    
+    private lazy var coffeeIconView: UIView = {
+        let view = UIView()
+        view.layer.cornerRadius = Constants.borderRadius
+        view.layer.borderWidth = Constants.borderWidth
+        view.layer.borderColor = UIColor.white.withAlphaComponent(Constants.borderAlpha).cgColor
+        view.clipsToBounds = true
+        view.addSubview(coffeeImageView)
+        NSLayoutConstraint.activate([
+            coffeeImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            coffeeImageView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+        ])
+        return view
+    }()
+    
+    private lazy var rightStack: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [helpView, coffeeIconView])
+        stack.axis = .horizontal
+        stack.spacing = Constants.rightStackSpacing
+        stack.alignment = .center
+        return stack
+    }()
+    
+    private lazy var mainStack: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [menuButton, UIView(), rightStack])
+        stack.axis = .horizontal
+        stack.alignment = .center
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+    
+    // MARK: - Init
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -35,136 +152,30 @@ final class BreakHeaderView: UIView {
     }
     
     override var intrinsicContentSize: CGSize {
-        return CGSize(width: UIView.noIntrinsicMetric, height: 44)
+        CGSize(width: UIView.noIntrinsicMetric, height: Constants.height)
     }
-    
-    private func setupUI() {
-        setupMenuButton()
-        setupHelpButton()
-        setupCoffeeButton()
-        setupStack()
-    }
-    
-    private func setupMenuButton() {
-        menuButton.setImage(
-            UIImage(
-                systemName: "line.3.horizontal",
-                withConfiguration: UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
-            ),
-            for: .normal
-        )
-        menuButton.tintColor = .white
-    }
-    
-    private func setupHelpButton() {
-        // Container
-        helpView.layer.cornerRadius = 8
-        helpView.layer.borderWidth = 1
-        helpView.layer.borderColor = UIColor.white.withAlphaComponent(0.7).cgColor
-        helpView.clipsToBounds = true
+}
 
-        // Icon
-        helpImageView.image = UIImage(systemName: "phone.fill")?.withRenderingMode(.alwaysTemplate)
-        helpImageView.tintColor = .white
-        helpImageView.contentMode = .scaleAspectFit
-        helpImageView.translatesAutoresizingMaskIntoConstraints = false
+// MARK: - Setup
 
-        // Label
-        helpLabel.text = "Help"
-        helpLabel.textColor = .white
-        helpLabel.font = UIFont.systemFont(ofSize: 15, weight: .regular)
-        helpLabel.translatesAutoresizingMaskIntoConstraints = false
-
-        // Inner stack
-        let innerStack = UIStackView(arrangedSubviews: [helpImageView, helpLabel])
-        innerStack.axis = .horizontal
-        innerStack.spacing = 6
-        innerStack.alignment = .center
-        innerStack.translatesAutoresizingMaskIntoConstraints = false
-
-        helpView.addSubview(innerStack)
-
+private extension BreakHeaderView {
+    func setupUI() {
+        addSubview(mainStack)
         NSLayoutConstraint.activate([
-            helpImageView.widthAnchor.constraint(equalToConstant: 16),
-            helpImageView.heightAnchor.constraint(equalToConstant: 16),
-
-            innerStack.centerXAnchor.constraint(equalTo: helpView.centerXAnchor),
-            innerStack.centerYAnchor.constraint(equalTo: helpView.centerYAnchor),
-            innerStack.leadingAnchor.constraint(equalTo: helpView.leadingAnchor, constant: 14),
-            innerStack.trailingAnchor.constraint(equalTo: helpView.trailingAnchor, constant: -14),
-        ])
-        
-        let gesture = UITapGestureRecognizer()
-        gesture.addTarget(self, action: #selector(helpTapped))
-        helpView.addGestureRecognizer(gesture)
-    }
-    private func setupCoffeeButton() {
-        
-        coffeeIconView.layer.cornerRadius = 8
-        coffeeIconView.layer.borderWidth = 1
-        coffeeIconView.layer.borderColor = UIColor.white.withAlphaComponent(0.7).cgColor
-        coffeeIconView.clipsToBounds = true
-        
-        // Image inside
-        let image = UIImage(named: "coffee")?.withRenderingMode(.alwaysTemplate)
-        coffeeImageView.image = image
-        coffeeImageView.tintColor = .white
-        coffeeImageView.contentMode = .scaleAspectFit
-        coffeeImageView.translatesAutoresizingMaskIntoConstraints = false
-        
-        coffeeIconView.addSubview(coffeeImageView)
-        
-        NSLayoutConstraint.activate([
-            coffeeImageView.centerXAnchor.constraint(equalTo: coffeeIconView.centerXAnchor),
-            coffeeImageView.centerYAnchor.constraint(equalTo: coffeeIconView.centerYAnchor),
-            coffeeImageView.widthAnchor.constraint(equalToConstant: 20),
-            coffeeImageView.heightAnchor.constraint(equalToConstant: 20)
-        ])
-    }
-    
-    private func setupStack() {
-        
-        let rightStack = UIStackView(arrangedSubviews: [
-            helpView,
-            coffeeIconView
-        ])
-        
-        rightStack.axis = .horizontal
-        rightStack.spacing = 12
-        rightStack.alignment = .center
-        
-        
-        // MARK: Main Stack
-        
-        let stack = UIStackView(arrangedSubviews: [
-            menuButton,
-            UIView(),
-            rightStack
-        ])
-        
-        stack.axis = .horizontal
-        stack.alignment = .center
-        
-        
-        addSubview(stack)
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        
-        
-        NSLayoutConstraint.activate([
-            
-            stack.topAnchor.constraint(equalTo: topAnchor),
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor),
-            
-            helpView.heightAnchor.constraint(equalToConstant: 36),
-            coffeeIconView.heightAnchor.constraint(equalToConstant: 36),
-            coffeeIconView.widthAnchor.constraint(equalToConstant: 48)
+            mainStack.topAnchor.constraint(equalTo: topAnchor),
+            mainStack.leadingAnchor.constraint(equalTo: leadingAnchor),
+            mainStack.trailingAnchor.constraint(equalTo: trailingAnchor),
+            mainStack.bottomAnchor.constraint(equalTo: bottomAnchor),
+            helpView.heightAnchor.constraint(equalToConstant: Constants.actionViewHeight),
+            coffeeIconView.heightAnchor.constraint(equalToConstant: Constants.actionViewHeight),
+            coffeeIconView.widthAnchor.constraint(equalToConstant: Constants.coffeeViewWidth)
         ])
     }
 }
 
-extension BreakHeaderView {
+// MARK: - Actions
+
+private extension BreakHeaderView {
     @objc func helpTapped() {
         delegate?.didTapHelp()
     }

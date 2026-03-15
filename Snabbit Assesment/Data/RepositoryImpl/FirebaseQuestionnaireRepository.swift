@@ -7,41 +7,26 @@
 
 import Foundation
 
+// MARK: - Repository Implementation
 final class QuestionnaireRepository: QuestionnaireRepositoryProtocol {
     
     private let service: FirebaseQuestionnaireService
     private let userId: String
     
-    init(
-        service: FirebaseQuestionnaireService,
-        userId: String
-    ) {
+    init(service: FirebaseQuestionnaireService, userId: String) {
         self.service = service
         self.userId = userId
     }
     
-    func fetchQuestions(
-        completion: @escaping (Result<[QuestionnaireQuestion], Error>) -> Void
-    ) {
-        service.fetchQuestions(completion: completion)
+    func fetchQuestions() async throws -> [QuestionnaireQuestion] {
+        try await service.fetchQuestions()
     }
     
-    
-    func submitResponses(
-        state: QuestionnaireState,
-        completion: @escaping (Result<Void, Error>) -> Void
-    ) {
-        
-        service.submitResponses(
-            userId: userId,
-            state: state,
-            completion: completion
-        )
+    func submitResponses(state: QuestionnaireState) async throws {
+        try await service.submitResponses(userId: userId, state: state)
     }
     
     func hasSubmittedQuestionnaire() async throws -> Bool {
-        return try await service.hasSubmittedQuestionnaire(
-               userId: userId
-           )
+        try await service.hasSubmittedQuestionnaire(userId: userId)
     }
 }
