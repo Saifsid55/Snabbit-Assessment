@@ -37,6 +37,12 @@ final class LogoutViewController: UIViewController {
         bindViewModel()
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(false, animated: false)
+    }
+
+    
     private func bindViewModel() {
         
         viewModel.onLogoutSuccess = { [weak self] in
