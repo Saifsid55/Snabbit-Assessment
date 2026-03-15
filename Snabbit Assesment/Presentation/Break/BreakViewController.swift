@@ -172,9 +172,13 @@ private extension BreakViewController {
         viewModel.onBreakEnded = { [weak self] in
             DispatchQueue.main.async {
                 guard let self else { return }
+                
+                self.timelineView.update(state: .breakEnded)
+                
                 self.timerCardView.showBreakFinishedState()
+                
                 UIView.animate(withDuration: 0.4) {
-                    self.scrollView.layoutIfNeeded()
+                    self.view.layoutIfNeeded()
                 }
             }
         }
@@ -190,6 +194,7 @@ private extension BreakViewController {
                     self?.timerCardView.endBreakButton.setTitle("End my break", for: .normal)
                     self?.timerCardView.endBreakButton.backgroundColor = .systemRed
                     self?.isBreakRunning = true
+                    self?.timelineView.update(state: .breakRunning)
                 case .ended:
                     break
                 }

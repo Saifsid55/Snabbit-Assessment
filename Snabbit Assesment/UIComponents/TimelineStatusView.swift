@@ -9,42 +9,25 @@ import UIKit
 
 final class TimelineStatusView: UIView {
 
-    private func makeRow(title: String, color: UIColor) -> UIView {
-
-        let dot = UIView()
-        dot.backgroundColor = color
-        dot.layer.cornerRadius = 6
-
-        dot.translatesAutoresizingMaskIntoConstraints = false
-
-        NSLayoutConstraint.activate([
-            dot.widthAnchor.constraint(equalToConstant: 12),
-            dot.heightAnchor.constraint(equalToConstant: 12)
-        ])
-
-        let label = UILabel()
-        label.text = title
-
-        let stack = UIStackView(arrangedSubviews: [dot, label])
-        stack.axis = .horizontal
-        stack.spacing = 8
-
-        return stack
+    enum TimelineState {
+        case loggedIn
+        case breakRunning
+        case breakEnded
     }
+
+    // ← Pass position so first/last rows hide their outer lines
+    private let loginRow  = TimelineRowView(title: "Login",             position: .first)
+    private let lunchRow  = TimelineRowView(title: "Lunch in Progress", position: .middle)
+    private let logoutRow = TimelineRowView(title: "Logout",            position: .last)
 
     override init(frame: CGRect) {
         super.init(frame: frame)
 
-        let login = makeRow(title: "Login", color: .systemGreen)
-        let lunch = makeRow(title: "Lunch in Progress", color: .systemOrange)
-        let logout = makeRow(title: "Logout", color: .systemGray)
-
-        let stack = UIStackView(arrangedSubviews: [login, lunch, logout])
+        let stack = UIStackView(arrangedSubviews: [loginRow, lunchRow, logoutRow])
         stack.axis = .vertical
-        stack.spacing = 16
+        stack.spacing = 0 
 
         addSubview(stack)
-
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
@@ -53,9 +36,31 @@ final class TimelineStatusView: UIView {
             stack.trailingAnchor.constraint(equalTo: trailingAnchor),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
+
+        update(state: .loggedIn)
     }
 
-    required init?(coder: NSCoder) {
-        fatalError()
+    required init?(coder: NSCoder) { fatalError() }
+
+    func update(state: TimelineState) {
+        switch state {
+        case .loggedIn:
+            loginRow.update(state: .completed)
+            loginRow.setBottomLineColor(.systemGray4)
+            lunchRow.update(state: .pending)
+            logoutRow.update(state: .pending)
+
+        case .breakRunning:
+            loginRow.update(state: .completed)
+            loginRow.setBottomLineColor(.systemOrange)
+            lunchRow.update(state: .active)
+            logoutRow.update(state: .pending)
+
+        case .breakEnded:
+            loginRow.update(state: .completed)
+            loginRow.setBottomLineColor(UIColor(red: 0.24, green: 0.78, blue: 0.60, alpha: 1))
+            lunchRow.update(state: .completed)
+            logoutRow.update(state: .pending)
+        }
     }
 }
