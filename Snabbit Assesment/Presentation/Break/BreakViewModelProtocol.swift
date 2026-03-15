@@ -16,6 +16,8 @@ protocol BreakViewModelProtocol: AnyObject {
     
     var onError: ((String) -> Void)? { get set }
     
+    var onUsernameUpdate: ((String) -> Void)? { get set }
+    
     // MARK: - Actions
     
     func startBreak()
@@ -27,4 +29,7 @@ protocol BreakViewModelProtocol: AnyObject {
     func didTapBreakButton()
     
     func viewDidLoad()
+    
+    func didResetBreak()
+
 }

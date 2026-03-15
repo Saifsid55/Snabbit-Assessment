@@ -32,5 +32,7 @@ protocol AuthRepositoryProtocol {
         completion: @escaping (Result<Void, Error>) -> Void
     )
     
+    func fetchCurrentUser() async throws -> User
+    
     func logout() throws
 }

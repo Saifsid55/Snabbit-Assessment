@@ -78,6 +78,18 @@ final class AuthRepository: AuthRepositoryProtocol {
         )
     }
     
+    func fetchCurrentUser() async throws -> User {
+        guard let userID = authService.currentUserId() else {
+            throw NSError(
+                domain: "AuthRepository",
+                code: 401,
+                userInfo: [NSLocalizedDescriptionKey: "User not logged in"]
+            )
+        }
+        
+        return try await userService.fetchCurrentUser(uid: userID)
+    }
+    
     func logout() throws {
         try authService.logout()
     }

@@ -15,10 +15,8 @@ final class CircularTimerView: UIView {
     private let breakLabel = UILabel()
     private var currentProgress: Float = 1.0
     
-    // 60° gap at the bottom
-    private let gapAngle: CGFloat = .pi / 3
+    private let gapAngle: CGFloat = .pi / 2.5
     
-    // Arc starts bottom-left, goes clockwise, ends bottom-right
     private var startAngle: CGFloat { (.pi / 2) + (gapAngle / 2) }
     private var endAngle:   CGFloat { (.pi / 2) - (gapAngle / 2) + 2 * .pi }
     
@@ -76,7 +74,7 @@ final class CircularTimerView: UIView {
         
         // "Break" in the bottom gap between arc ends
         breakLabel.text = "Break"
-        breakLabel.font = .systemFont(ofSize: 13)
+        breakLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         breakLabel.textColor = UIColor.white.withAlphaComponent(0.85)
         breakLabel.textAlignment = .center
         

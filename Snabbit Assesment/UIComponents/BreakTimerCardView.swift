@@ -10,7 +10,6 @@ import UIKit
 final class BreakTimerCardView: UIView {
     
     var titleLabel: UILabel!
-    var subtitleLabel: UILabel!
     var timerView: CircularTimerView!
     var breakEndsLabel: UILabel!
     var endBreakButton: UIButton!
@@ -26,6 +25,12 @@ final class BreakTimerCardView: UIView {
     private var spacerEqualHeightConstraint: NSLayoutConstraint!
     private var topSpacerFixedConstraint: NSLayoutConstraint!
     private var bottomSpacerFixedConstraint: NSLayoutConstraint!
+    
+    private enum CardDisplayState {
+        case preBreak, timer, finished
+    }
+    private var currentDisplayState: CardDisplayState?
+    
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -49,7 +54,6 @@ final class BreakTimerCardView: UIView {
         setupBackground()
         setupStack()
         createTitleLabel()
-        subTitleLabel()
         setupTimerView()
         setupSuccessView()
         setupBreakEndsLabel()
@@ -70,15 +74,13 @@ final class BreakTimerCardView: UIView {
             backgroundImageView.topAnchor.constraint(equalTo: topAnchor),
             backgroundImageView.leadingAnchor.constraint(equalTo: leadingAnchor),
             backgroundImageView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            backgroundImageView.bottomAnchor.constraint(equalTo: bottomAnchor), // ← keep this
+            backgroundImageView.bottomAnchor.constraint(equalTo: bottomAnchor),
             
-            // ← ADD: break the intrinsic size resistance
             backgroundImageView.heightAnchor.constraint(greaterThanOrEqualToConstant: 0)
         ])
         
-        // ← Lower content hugging so image doesn't resist compression
         backgroundImageView.setContentHuggingPriority(.defaultLow, for: .vertical)
-        backgroundImageView.setContentCompressionResistancePriority(.defaultLow, for: .vertical) // ← KEY FIX
+        backgroundImageView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
     }
     
     
@@ -102,7 +104,6 @@ final class BreakTimerCardView: UIView {
         topSpacer.translatesAutoresizingMaskIntoConstraints = false
         bottomSpacer.translatesAutoresizingMaskIntoConstraints = false
         
-        // ← NO greaterThanOrEqual here — only store these for later use
         topSpacerFixedConstraint = topSpacer.heightAnchor.constraint(equalToConstant: 24)
         bottomSpacerFixedConstraint = bottomSpacer.heightAnchor.constraint(equalToConstant: 24)
         
@@ -111,28 +112,15 @@ final class BreakTimerCardView: UIView {
     
     private func createTitleLabel() {
         titleLabel = UILabel()
-        titleLabel.text = "We value your hard work!"
+        titleLabel.text = "We value your hard work! \n Take this time to relax"
         titleLabel.textColor = .white
-        titleLabel.font = .systemFont(ofSize: 16, weight: .semibold)
+        titleLabel.font = .systemFont(ofSize: 18, weight: .semibold)
         titleLabel.textAlignment = .center
-        titleLabel.numberOfLines = 0          // ← ADD THIS
-        titleLabel.setContentHuggingPriority(.required, for: .vertical)  // ← ADD THIS
+        titleLabel.numberOfLines = 0
+        titleLabel.setContentHuggingPriority(.required, for: .vertical)
         
         stack.addArrangedSubview(titleLabel)
     }
-    
-    private func subTitleLabel() {
-        subtitleLabel = UILabel()
-        subtitleLabel.text = "Take this time to relax"
-        subtitleLabel.textColor = .white
-        subtitleLabel.font = .systemFont(ofSize: 14)
-        subtitleLabel.textAlignment = .center
-        subtitleLabel.numberOfLines = 0       // ← ADD THIS
-        subtitleLabel.setContentHuggingPriority(.required, for: .vertical)  // ← ADD THIS
-        
-        stack.addArrangedSubview(subtitleLabel)
-    }
-    
     
     private func setupTimerView() {
         timerView = CircularTimerView()
@@ -149,10 +137,11 @@ final class BreakTimerCardView: UIView {
     
     private func setupBreakEndsLabel() {
         breakEndsLabel = UILabel()
-        breakEndsLabel.text = "Break ends at --:-- --"  // ← placeholder until VM updates it
+        breakEndsLabel.text = "Break ends at --:-- --"
         breakEndsLabel.textColor = UIColor.white.withAlphaComponent(0.85)
         breakEndsLabel.font = .systemFont(ofSize: 14, weight: .medium)
         breakEndsLabel.textAlignment = .center
+        breakEndsLabel.isHidden = true
         stack.addArrangedSubview(breakEndsLabel)
     }
     
@@ -206,33 +195,82 @@ final class BreakTimerCardView: UIView {
         stack.insertArrangedSubview(breakFinishedLabel, at: stack.arrangedSubviews.count - 1)
     }
     
-    func showBreakFinishedState() {
-        timerHeightConstraint.isActive = false
-        endBreakButtonHeightConstraint.isActive = false
+    func showPreBreakState() {
+        guard currentDisplayState != .preBreak else { return }
+        currentDisplayState = .preBreak
+        
+        stack.spacing = 8
         
         spacerEqualHeightConstraint.isActive = false
+        topSpacerFixedConstraint.constant = 8
+        bottomSpacerFixedConstraint.constant = 8
         topSpacerFixedConstraint.isActive = true
         bottomSpacerFixedConstraint.isActive = true
         
-        titleLabel.isHidden = true
-        subtitleLabel.isHidden = true
-        timerView.isHidden = true
+        timerHeightConstraint.isActive = true
+        endBreakButtonHeightConstraint.isActive = true
+        
+        titleLabel.isHidden = false
+        timerView.isHidden = false
+        endBreakButton.isHidden = false
         breakEndsLabel.isHidden = true
-        endBreakButton.isHidden = true
         
-        successView.isHidden = false
-        breakFinishedLabel.isHidden = false
-        successView.startRippleAnimation()
+        successView.isHidden = true
+        breakFinishedLabel.isHidden = true
+        successView.stopRippleAnimation()  // ← ensure clean state
         
-        UIView.animate(withDuration: 0.35) {
-            self.layoutIfNeeded()
-        }
+        UIView.animate(withDuration: 0.25) { self.layoutIfNeeded() }
     }
     
     func showTimerState() {
-
-        successView.isHidden = true
+        guard currentDisplayState != .timer else { return }
+        currentDisplayState = .timer
+        
+        stack.spacing = 12
+        
+        timerHeightConstraint.isActive = true
+        endBreakButtonHeightConstraint.isActive = true
+        topSpacerFixedConstraint.isActive = false
+        bottomSpacerFixedConstraint.isActive = false
+        spacerEqualHeightConstraint.isActive = true
+        
+        titleLabel.isHidden = false
         timerView.isHidden = false
         endBreakButton.isHidden = false
+        breakEndsLabel.isHidden = false
+        
+        successView.isHidden = true
+        breakFinishedLabel.isHidden = true
+        successView.stopRippleAnimation()  // ← stop before hiding
+        
+        UIView.animate(withDuration: 0.35) { self.layoutIfNeeded() }
     }
+    
+    func showBreakFinishedState() {
+        // Do NOT guard here — always restart animation on re-entry
+        let isFirstEntry = currentDisplayState != .finished
+        currentDisplayState = .finished
+        
+        if isFirstEntry {
+            timerHeightConstraint.isActive = false
+            endBreakButtonHeightConstraint.isActive = false
+            spacerEqualHeightConstraint.isActive = false
+            topSpacerFixedConstraint.isActive = true
+            bottomSpacerFixedConstraint.isActive = true
+            
+            titleLabel.isHidden = true
+            timerView.isHidden = true
+            breakEndsLabel.isHidden = true
+            endBreakButton.isHidden = true
+            breakFinishedLabel.isHidden = false
+            successView.isHidden = false
+            
+            UIView.animate(withDuration: 0.35) { self.layoutIfNeeded() }
+        }
+        
+        // Always stop then restart — fixes the "back from logout" animation freeze
+        successView.stopRippleAnimation()
+        successView.startRippleAnimation()  // ← clean restart every time
+    }
+    
 }

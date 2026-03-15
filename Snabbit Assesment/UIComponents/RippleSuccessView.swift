@@ -12,6 +12,8 @@ final class RippleSuccessView: UIView {
     private let checkCircle = UIView()
     private let checkmark = UIImageView()
     
+    private var rippleLayers: [CAShapeLayer] = [] 
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupCheckmark()
@@ -53,6 +55,8 @@ final class RippleSuccessView: UIView {
         ])
     }
     
+    // MARK: - Start Ripple
+    
     func startRippleAnimation() {
         
         layoutIfNeeded()
@@ -61,6 +65,20 @@ final class RippleSuccessView: UIView {
         createRipple(delay: 0.5)
         createRipple(delay: 1.0)
     }
+    
+    // MARK: - Stop Ripple
+    
+    func stopRippleAnimation() {
+        
+        rippleLayers.forEach {
+            $0.removeAllAnimations()
+            $0.removeFromSuperlayer()
+        }
+        
+        rippleLayers.removeAll()
+    }
+    
+    // MARK: - Ripple Creation
     
     private func createRipple(delay: TimeInterval) {
         
@@ -84,6 +102,8 @@ final class RippleSuccessView: UIView {
         
         layer.insertSublayer(rippleLayer, below: checkCircle.layer)
         
+        rippleLayers.append(rippleLayer)
+        
         let scale = CABasicAnimation(keyPath: "transform.scale")
         scale.fromValue = 1
         scale.toValue = 2.3
@@ -101,5 +121,4 @@ final class RippleSuccessView: UIView {
         
         rippleLayer.add(group, forKey: "ripple")
     }
-    
 }

@@ -19,4 +19,6 @@ struct BreakViewState {
     let timelineState: TimelineState
     
     let isBreakFinished: Bool
+    
+    let titleText: String
 }

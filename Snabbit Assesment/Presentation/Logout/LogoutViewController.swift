@@ -16,6 +16,8 @@ final class LogoutViewController: UIViewController {
     private var viewModel: LogoutViewModelProtocol
     private let container: AppDependencyContainer
     
+    var onResetSuccess: (() -> Void)?
+    
     init(
         viewModel: LogoutViewModelProtocol,
         container: AppDependencyContainer
@@ -47,15 +49,29 @@ final class LogoutViewController: UIViewController {
     private func bindViewModel() {
         
         viewModel.onLogoutSuccess = { [weak self] in
-            self?.navigateToLogin()
+            guard let self else { return }
+            
+            let loginVC = self.container.makeLoginViewController()
+            let nav = UINavigationController(rootViewController: loginVC)
+            
+            if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let window = scene.windows.first {
+                
+                window.rootViewController = nav
+                window.makeKeyAndVisible()
+            }
         }
         
         viewModel.onError = { error in
             print(error)
         }
         
-        viewModel.onResetSuccess = {
+        viewModel.onResetSuccess = { [weak self] in
             print("Break reset successfully")
+            self?.onResetSuccess?()    // ← propagate up to BreakViewController
+            DispatchQueue.main.async {
+                self?.navigationController?.popViewController(animated: true)
+            }
         }
     }
 }

@@ -63,6 +63,13 @@ final class BreakViewController: UIViewController {
         navigationController?.setNavigationBarHidden(true, animated: false)
         viewModel.refreshState()
     }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        // Pause ripple so it restarts properly on viewWillAppear
+        timerCardView.successView.stopRippleAnimation()
+    }
+
 }
 
 //
@@ -130,11 +137,9 @@ private extension BreakViewController {
     
     func setupGreeting() {
         
-        greetingLabel.text = "Hi, Reshma!"
         greetingLabel.font = .systemFont(ofSize: 14, weight: .regular)
         greetingLabel.textColor = .white
         
-        titleLabel.text = "You are on break!"
         titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
         titleLabel.textColor = .white
         
@@ -203,6 +208,8 @@ private extension BreakViewController {
             
             DispatchQueue.main.async {
                 
+                self.titleLabel.text = state.titleText
+                
                 self.timerCardView.timerView.update(
                     time: state.timerText,
                     progress: state.progress
@@ -219,12 +226,22 @@ private extension BreakViewController {
                 
                 self.timelineView.update(state: state.timelineState)
                 
+                if state.breakEndsText.contains("--") {
+                    self.timerCardView.breakEndsLabel.isHidden = true
+                } else {
+                    self.timerCardView.breakEndsLabel.isHidden = false
+                }
+                
                 if state.isBreakFinished {
                     
                     self.timerCardView.showBreakFinishedState()
                     
-                } else {
+                } else if state.timerText == "00:00" {
+                    // Break not started yet
+                    self.timerCardView.showPreBreakState()
                     
+                } else {
+                    // Break running
                     self.timerCardView.showTimerState()
                 }
             }
@@ -241,6 +258,13 @@ private extension BreakViewController {
                 } else {
                     self.showError(message: error)
                 }
+            }
+        }
+        
+        viewModel.onUsernameUpdate = { [weak self] username in
+            
+            DispatchQueue.main.async {
+                self?.greetingLabel.text = "Hi, \(username)!"
             }
         }
     }
@@ -290,14 +314,14 @@ private extension BreakViewController {
 //
 
 extension BreakViewController: BreakHeaderViewDelegate {
-    
+
     func didTapHelp() {
-        
         let logoutVC = container.makeLogoutViewController()
-        
-        navigationController?.pushViewController(
-            logoutVC,
-            animated: true
-        )
+
+        logoutVC.onResetSuccess = { [weak self] in
+            self?.viewModel.didResetBreak()
+        }
+
+        navigationController?.pushViewController(logoutVC, animated: true)
     }
 }

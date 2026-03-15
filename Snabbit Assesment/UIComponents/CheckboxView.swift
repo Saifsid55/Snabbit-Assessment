@@ -1,75 +1,118 @@
 
 import UIKit
-
+ 
 final class CheckboxView: UIView {
-    
-    private let checkbox = UIView()
-    private let label = UILabel()
-    
-    private var isChecked = false
-    
+ 
+    // MARK: Public
+ 
     var onToggle: (() -> Void)?
-    
+ 
+    // MARK: Private
+ 
+    private var isChecked = false
+ 
+    private let box: UIView = {
+        let view = UIView()
+        view.layer.cornerRadius = 6
+        view.layer.borderWidth  = 1.5
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+ 
+    private let checkmarkImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.image = UIImage(
+            systemName: "checkmark",
+            withConfiguration: UIImage.SymbolConfiguration(weight: .bold)
+        )
+        imageView.tintColor = .white
+        imageView.contentMode = .scaleAspectFit
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.isHidden = true
+        return imageView
+    }()
+ 
+    private let titleLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 15, weight: .regular)
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+ 
+    // MARK: Init
+ 
     init(title: String) {
         super.init(frame: .zero)
-        
-        setupUI(title: title)
-        setupGesture()
+        titleLabel.text = title
+        setupView()
+        updateAppearance()
     }
-    
-    required init?(coder: NSCoder) {
-        fatalError()
-    }
-    
-    private func setupUI(title: String) {
-        
-        checkbox.layer.cornerRadius = 6
-        checkbox.layer.borderWidth = 2
-        checkbox.layer.borderColor = UIColor.lightGray.cgColor
-        
-        checkbox.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            checkbox.widthAnchor.constraint(equalToConstant: 24),
-            checkbox.heightAnchor.constraint(equalToConstant: 24)
-        ])
-        
-        label.text = title
-        label.numberOfLines = 0
-        
-        let stack = UIStackView(arrangedSubviews: [checkbox, label])
-        stack.axis = .horizontal
-        stack.spacing = 10
-        stack.alignment = .center
-        
-        addSubview(stack)
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: topAnchor),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor),
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor)
-        ])
-    }
-    
-    private func setupGesture() {
-        
-        let tap = UITapGestureRecognizer(target: self, action: #selector(toggle))
+ 
+    required init?(coder: NSCoder) { fatalError() }
+}
+ 
+// MARK: - Layout
+ 
+private extension CheckboxView {
+ 
+    func setupView() {
+ 
+        // Tap gesture on the whole row
+        let tap = UITapGestureRecognizer(
+            target: self,
+            action: #selector(handleTap)
+        )
         addGestureRecognizer(tap)
+ 
+        // Box
+        addSubview(box)
+        box.addSubview(checkmarkImageView)
+ 
+        NSLayoutConstraint.activate([
+            box.widthAnchor.constraint(equalToConstant: 22),
+            box.heightAnchor.constraint(equalToConstant: 22),
+            box.leadingAnchor.constraint(equalTo: leadingAnchor),
+            box.centerYAnchor.constraint(equalTo: centerYAnchor),
+ 
+            checkmarkImageView.centerXAnchor.constraint(equalTo: box.centerXAnchor),
+            checkmarkImageView.centerYAnchor.constraint(equalTo: box.centerYAnchor),
+            checkmarkImageView.widthAnchor.constraint(equalToConstant: 13),
+            checkmarkImageView.heightAnchor.constraint(equalToConstant: 13)
+        ])
+ 
+        // Label
+        addSubview(titleLabel)
+ 
+        NSLayoutConstraint.activate([
+            titleLabel.leadingAnchor.constraint(equalTo: box.trailingAnchor, constant: 10),
+            titleLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
+            titleLabel.topAnchor.constraint(equalTo: topAnchor, constant: 6),
+            titleLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -6)
+        ])
     }
-    
-    @objc
-    private func toggle() {
-        
-        isChecked.toggle()
-        updateUI()
-        
-        onToggle?()
-    }
-    
-    private func updateUI() {
-        
-        checkbox.backgroundColor = isChecked ? .systemPurple : .clear
+ 
+    func updateAppearance() {
+        if isChecked {
+            box.backgroundColor  = AppColors.checkboxChecked
+            box.layer.borderColor = AppColors.checkboxChecked.cgColor
+            checkmarkImageView.isHidden = false
+        } else {
+            box.backgroundColor  = .clear
+            box.layer.borderColor = AppColors.checkboxUnchecked.cgColor
+            checkmarkImageView.isHidden = true
+        }
     }
 }
+ 
+// MARK: - Actions
+ 
+@objc private extension CheckboxView {
+ 
+    func handleTap() {
+        isChecked.toggle()
+        updateAppearance()
+        onToggle?()
+    }
+}
+ 

@@ -12,22 +12,22 @@ final class QuestionnaireViewController: UIViewController {
     private var viewModel: QuestionnaireViewModelProtocol
     private let container: AppDependencyContainer
     
-    private var scrollView = UIScrollView()
-    private var contentStack = UIStackView()
+    private let scrollView = UIScrollView()
+    private let contentStack = UIStackView()
     
-    private var continueButton = UIButton()
-    
-    private var dobDayTF = UITextField()
-    private var dobMonthTF = UITextField()
-    private var dobYearTF = UITextField()
+    private let continueButton = UIButton()
     
     private let progressContainer = UIView()
     private let progressFill = UIView()
     private var progressWidthConstraint: NSLayoutConstraint!
+    private var dobFields: [UITextField] = []
+    private var dobErrorLabel: UILabel?
     
-    init(viewModel: QuestionnaireViewModelProtocol,
-         container: AppDependencyContainer) {
-        
+    
+    init(
+        viewModel: QuestionnaireViewModelProtocol,
+        container: AppDependencyContainer
+    ) {
         self.viewModel = viewModel
         self.container = container
         super.init(nibName: nil, bundle: nil)
@@ -43,19 +43,37 @@ final class QuestionnaireViewController: UIViewController {
         view.backgroundColor = .white
         
         setupProgressBar()
-        setupLayout()
-        setSectionHeader()
-        setupSkillsSection()
-        setupSmartphoneSection()
-        setupSmartphoneRequirementSection()
-        setupGoogleMapsSection()
-        setupDOBSection()
         setupContinueButton()
+        setupLayout()
         bindViewModel()
+        
+        viewModel.loadQuestions()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        registerKeyboardObservers()   // ← add
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        unregisterKeyboardObservers() // ← add
+    }
+    
+    func updateProgress(_ progress: Float) {
+        
+        let maxWidth = progressContainer.bounds.width
+        progressWidthConstraint.constant = maxWidth * CGFloat(progress)
+        
+        UIView.animate(withDuration: 0.3) {
+            self.view.layoutIfNeeded()
+        }
     }
 }
 
-//MARK: - Layout
+//
+// MARK: - Layout
+//
 
 private extension QuestionnaireViewController {
     
@@ -65,10 +83,16 @@ private extension QuestionnaireViewController {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: progressContainer.bottomAnchor, constant: 20),
+            scrollView.topAnchor.constraint(
+                equalTo: progressContainer.bottomAnchor,
+                constant: 20
+            ),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            scrollView.bottomAnchor.constraint(
+                equalTo: continueButton.topAnchor,
+                constant: -8
+            )
         ])
         
         contentStack.axis = .vertical
@@ -79,24 +103,35 @@ private extension QuestionnaireViewController {
         
         NSLayoutConstraint.activate([
             contentStack.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            contentStack.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 20),
-            contentStack.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -20),
+            contentStack.leadingAnchor.constraint(
+                equalTo: scrollView.leadingAnchor,
+                constant: 20
+            ),
+            contentStack.trailingAnchor.constraint(
+                equalTo: scrollView.trailingAnchor,
+                constant: -20
+            ),
             contentStack.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentStack.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40)
+            contentStack.widthAnchor.constraint(
+                equalTo: scrollView.widthAnchor,
+                constant: -40
+            )
         ])
     }
 }
 
-//MARK: - Progress Bar
+//
+// MARK: - Progress Bar
+//
 
 private extension QuestionnaireViewController {
     
     func setupProgressBar() {
         
-        progressContainer.backgroundColor = .systemGray5
+        progressContainer.backgroundColor = AppColors.progressTrack
         progressContainer.layer.cornerRadius = 3
         
-        progressFill.backgroundColor = .systemBlue
+        progressFill.backgroundColor = AppColors.progressFill
         progressFill.layer.cornerRadius = 3
         
         view.addSubview(progressContainer)
@@ -105,314 +140,59 @@ private extension QuestionnaireViewController {
         progressContainer.translatesAutoresizingMaskIntoConstraints = false
         progressFill.translatesAutoresizingMaskIntoConstraints = false
         
-        progressWidthConstraint = progressFill.widthAnchor.constraint(equalToConstant: 0)
+        progressWidthConstraint =
+        progressFill.widthAnchor.constraint(equalToConstant: 0)
         
         NSLayoutConstraint.activate([
             
-            progressContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
-            progressContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            progressContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            progressContainer.topAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.topAnchor,
+                constant: 12
+            ),
+            progressContainer.leadingAnchor.constraint(
+                equalTo: view.leadingAnchor,
+                constant: 20
+            ),
+            progressContainer.trailingAnchor.constraint(
+                equalTo: view.trailingAnchor,
+                constant: -20
+            ),
             progressContainer.heightAnchor.constraint(equalToConstant: 6),
             
-            progressFill.leadingAnchor.constraint(equalTo: progressContainer.leadingAnchor),
-            progressFill.topAnchor.constraint(equalTo: progressContainer.topAnchor),
-            progressFill.bottomAnchor.constraint(equalTo: progressContainer.bottomAnchor),
+            progressFill.leadingAnchor.constraint(
+                equalTo: progressContainer.leadingAnchor
+            ),
+            progressFill.topAnchor.constraint(
+                equalTo: progressContainer.topAnchor
+            ),
+            progressFill.bottomAnchor.constraint(
+                equalTo: progressContainer.bottomAnchor
+            ),
             
             progressWidthConstraint
         ])
     }
-    
-    func updateProgress(_ progress: Float) {
-        
-        let maxWidth = progressContainer.frame.width
-        progressWidthConstraint.constant = maxWidth * CGFloat(progress)
-        
-        UIView.animate(withDuration: 0.35) {
-            self.view.layoutIfNeeded()
-        }
-    }
 }
 
-//MARK: - Helpers
-
-private extension QuestionnaireViewController {
-    
-    func makeRadioRow(title: String) -> (UIView, RadioOptionView) {
-        
-        let radio = RadioOptionView()
-        
-        let label = UILabel()
-        label.text = title
-        
-        let stack = UIStackView(arrangedSubviews: [radio, label])
-        stack.axis = .horizontal
-        stack.spacing = 8
-        
-        return (stack, radio)
-    }
-}
-
-
-//MARK: - Section Header
-private extension QuestionnaireViewController {
-    func setSectionHeader() {
-        let header = SectionHeaderView(title: "Skills", subtitle: "Tell us bit more about yourself")
-        contentStack.addArrangedSubview(header)
-    }
-}
-
-//MARK: - Skills Section
-
-private extension QuestionnaireViewController {
-    
-    func setupSkillsSection() {
-        
-        let skills = [
-            "Cutting vegetables",
-            "Sweeping",
-            "Mopping",
-            "Cleaning bathrooms",
-            "Laundry",
-            "Washing dishes",
-            "None of the above"
-        ]
-        
-        var index = 0
-        
-        while index < skills.count {
-            
-            let row = UIStackView()
-            row.axis = .horizontal
-            row.spacing = 20
-            row.distribution = .fillEqually
-            
-            let skill = skills[index]
-            
-            let first = CheckboxView(title: skill)
-            first.onToggle = { [weak self] in
-                self?.viewModel.toggleSkill(skill)
-            }
-            
-            row.addArrangedSubview(first)
-            
-            if index + 1 < skills.count {
-                
-                let secondSkill = skills[index + 1]
-                
-                let second = CheckboxView(title: secondSkill)
-                second.onToggle = { [weak self] in
-                    self?.viewModel.toggleSkill(secondSkill)
-                }
-                
-                row.addArrangedSubview(second)
-            }
-            
-            contentStack.addArrangedSubview(row)
-            
-            index += 2
-        }
-    }
-}
-
-//MARK: - Smartphone
-
-private extension QuestionnaireViewController {
-    
-    func setupSmartphoneSection() {
-        
-        let label = UILabel()
-        label.text = "Do you have your own smartphone?"
-        
-        contentStack.addArrangedSubview(label)
-        
-        let (yesRow, yesRadio) = makeRadioRow(title: "Yes")
-        let (noRow, noRadio) = makeRadioRow(title: "No")
-        
-        yesRadio.onTap = { [weak self] in
-            yesRadio.setSelected(true)
-            noRadio.setSelected(false)
-            self?.viewModel.selectSmartphone(true)
-        }
-        
-        noRadio.onTap = { [weak self] in
-            yesRadio.setSelected(false)
-            noRadio.setSelected(true)
-            self?.viewModel.selectSmartphone(false)
-        }
-        
-        let rowStack = UIStackView(arrangedSubviews: [yesRow, noRow])
-        rowStack.axis = .horizontal
-        rowStack.spacing = 24
-        
-        contentStack.addArrangedSubview(rowStack)
-    }
-}
-
-//MARK: - Smartphone Requirement
-
-private extension QuestionnaireViewController {
-    
-    func setupSmartphoneRequirementSection() {
-        
-        let label = UILabel()
-        label.text = "Will you be able to get a phone for the job?"
-        
-        contentStack.addArrangedSubview(label)
-        
-        let (yesRow, yesRadio) = makeRadioRow(title: "Yes")
-        let (noRow, noRadio) = makeRadioRow(title: "No")
-        
-        yesRadio.onTap = { [weak self] in
-            yesRadio.setSelected(true)
-            noRadio.setSelected(false)
-            self?.viewModel.selectCanGetPhone(true)
-        }
-        
-        noRadio.onTap = { [weak self] in
-            yesRadio.setSelected(false)
-            noRadio.setSelected(true)
-            self?.viewModel.selectCanGetPhone(false)
-        }
-        
-        let rowStack = UIStackView(arrangedSubviews: [yesRow, noRow])
-        rowStack.axis = .horizontal
-        rowStack.spacing = 24
-        
-        contentStack.addArrangedSubview(rowStack)
-    }
-}
-
-//MARK: - Google Maps
-
-private extension QuestionnaireViewController {
-    
-    func setupGoogleMapsSection() {
-        
-        let label = UILabel()
-        label.text = "Have you ever used Google Maps?"
-        
-        contentStack.addArrangedSubview(label)
-        
-        let (yesRow, yesRadio) = makeRadioRow(title: "Yes")
-        let (noRow, noRadio) = makeRadioRow(title: "No")
-        
-        yesRadio.onTap = { [weak self] in
-            yesRadio.setSelected(true)
-            noRadio.setSelected(false)
-            self?.viewModel.selectGoogleMaps(true)
-        }
-        
-        noRadio.onTap = { [weak self] in
-            yesRadio.setSelected(false)
-            noRadio.setSelected(true)
-            self?.viewModel.selectGoogleMaps(false)
-        }
-        
-        let rowStack = UIStackView(arrangedSubviews: [yesRow, noRow])
-        rowStack.axis = .horizontal
-        rowStack.spacing = 24
-        
-        contentStack.addArrangedSubview(rowStack)
-    }
-}
-
-//MARK: - DOB
-
-private extension QuestionnaireViewController {
-    
-    func setupDOBSection() {
-        
-        let label = UILabel()
-        label.text = "Date of birth"
-        label.font = .systemFont(ofSize: 16, weight: .semibold)
-        
-        contentStack.addArrangedSubview(label)
-        
-        configureDOBField(dobDayTF, placeholder: "DD", width: 72)
-        configureDOBField(dobMonthTF, placeholder: "MM", width: 72)
-        configureDOBField(dobYearTF, placeholder: "YYYY", width: 120)
-        
-        let stack = UIStackView(arrangedSubviews: [
-            dobDayTF,
-            dobMonthTF,
-            dobYearTF
-        ])
-        
-        stack.axis = .horizontal
-        stack.spacing = 14
-        
-        contentStack.addArrangedSubview(stack)
-    }
-    
-    private func configureDOBField(_ textField: UITextField,
-                                   placeholder: String,
-                                   width: CGFloat) {
-        
-        textField.placeholder = placeholder
-        textField.textAlignment = .center
-        textField.font = .systemFont(ofSize: 16, weight: .medium)
-        
-        textField.layer.cornerRadius = 14
-        textField.layer.borderWidth = 1
-        textField.layer.borderColor = UIColor.systemGray4.cgColor
-        
-        textField.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            textField.widthAnchor.constraint(equalToConstant: width),
-            textField.heightAnchor.constraint(equalToConstant: 52)
-        ])
-        
-        textField.keyboardType = .numberPad
-        
-        textField.addTarget(self,
-                            action: #selector(dobChanged),
-                            for: .editingChanged)
-    }
-    
-}
-
-//MARK: - Continue Button
-
-private extension QuestionnaireViewController {
-    
-    func setupContinueButton() {
-        
-        continueButton.setTitle("Continue", for: .normal)
-        continueButton.backgroundColor = .systemPurple
-        continueButton.layer.cornerRadius = 8
-        
-        continueButton.isEnabled = false
-        continueButton.alpha = 0.5
-        
-        contentStack.addArrangedSubview(continueButton)
-        
-        continueButton.addTarget(
-              self,
-              action: #selector(didTapContinue),
-              for: .touchUpInside
-          )
-    }
-    
-    private func navigateToBreakScreen() {
-
-        let breakVC = container.makeBreakViewController()
-
-        navigationController?.pushViewController(breakVC, animated: true)
-    }
-}
-
-//MARK: - Bind ViewModel
+//
+// MARK: - ViewModel Binding
+//
 
 private extension QuestionnaireViewController {
     
     func bindViewModel() {
         
-        viewModel.isContinueEnabled = { [weak self] enabled in
+        viewModel.onQuestionsLoaded = { [weak self] questions in
             
             DispatchQueue.main.async {
-                self?.continueButton.isEnabled = enabled
-                self?.continueButton.alpha = enabled ? 1 : 0.5
+                self?.buildUI(from: questions)
+            }
+        }
+        
+        viewModel.onSubmitSuccess = { [weak self] in
+            
+            DispatchQueue.main.async {
+                self?.navigateToBreakScreen()
             }
         }
         
@@ -423,28 +203,558 @@ private extension QuestionnaireViewController {
             }
         }
         
-        viewModel.onFormCompleted = { [weak self] in
-
+        viewModel.isContinueEnabled = { [weak self] enabled in
+            
             DispatchQueue.main.async {
-
-                self?.navigateToBreakScreen()
+                self?.continueButton.isEnabled = enabled
+                self?.continueButton.alpha = enabled ? 1 : 0.5
             }
         }
     }
 }
 
-@objc extension QuestionnaireViewController {
+//
+// MARK: - Dynamic UI Builder
+//
+
+private extension QuestionnaireViewController {
+    
+    func buildUI(from questions: [QuestionnaireQuestion]) {
+        
+        questions.forEach { question in
+            
+            switch question.type {
+                
+            case .multiSelect:
+                setupMultiSelectSection(
+                    title: question.title,
+                    options: question.options ?? []
+                )
+                
+            case .singleSelect:
+                setupSingleSelectSection(
+                    questionId: question.id,
+                    title: question.title,
+                    options: question.options ?? []
+                )
+            case .date:
+                setupDOBSection(title: question.title)
+            }
+        }
+    }
+}
+
+//
+// MARK: - Multi Select
+//
+
+private extension QuestionnaireViewController {
+    
+    func setupMultiSelectSection(
+        title: String,
+        options: [String]
+    ) {
+        
+        let header = SectionHeaderView(
+            title: title,
+            subtitle: ""
+        )
+        
+        contentStack.addArrangedSubview(header)
+        
+        var index = 0
+        
+        while index < options.count {
+            
+            let row = UIStackView()
+            row.axis = .horizontal
+            row.spacing = 20
+            row.distribution = .fillEqually
+            
+            let firstOption = options[index]
+            let first = CheckboxView(title: firstOption)
+            
+            first.onToggle = { [weak self] in
+                self?.viewModel.toggleSkill(firstOption)
+            }
+            
+            row.addArrangedSubview(first)
+            
+            if index + 1 < options.count {
+                
+                let secondOption = options[index + 1]
+                let second = CheckboxView(title: secondOption)
+                
+                second.onToggle = { [weak self] in
+                    self?.viewModel.toggleSkill(secondOption)
+                }
+                row.addArrangedSubview(second)
+            }
+            
+            contentStack.addArrangedSubview(row)
+            
+            index += 2
+        }
+    }
+}
+
+//
+// MARK: - Single Select
+//
+
+private extension QuestionnaireViewController {
+    
+    func setupSingleSelectSection(
+        questionId: String,
+        title: String,
+        options: [String]
+    ) {
+        
+        let label = UILabel()
+        label.text = title
+        
+        contentStack.addArrangedSubview(label)
+        
+        guard options.count == 2 else { return }
+        
+        let (firstRow, firstRadio) = makeRadioRow(title: options[0])
+        let (secondRow, secondRadio) = makeRadioRow(title: options[1])
+        
+        firstRadio.onTap = { [weak self] in
+            firstRadio.setSelected(true)
+            secondRadio.setSelected(false)
+            
+            self?.viewModel.selectSingleOption(
+                questionId: questionId,
+                value: options[0]
+            )
+        }
+        
+        secondRadio.onTap = { [weak self] in
+            firstRadio.setSelected(false)
+            secondRadio.setSelected(true)
+            
+            self?.viewModel.selectSingleOption(
+                questionId: questionId,
+                value: options[1]
+            )
+        }
+        
+        let spacer = UIView()
+        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        
+        let stack = UIStackView(arrangedSubviews: [
+            firstRow,
+            secondRow,
+            spacer
+        ])
+        stack.axis     = .horizontal
+        stack.spacing  = 24
+        stack.alignment = .center
+        
+        contentStack.addArrangedSubview(stack)
+    }
+}
+
+// MARK: - DOB
+
+private extension QuestionnaireViewController {
+    
+    func setupDOBSection(title: String) {
+        
+        let label = UILabel()
+        label.text = title
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        contentStack.addArrangedSubview(label)
+        
+        
+        let day   = makeDOBField("DD",   maxDigits: 2)
+        let month = makeDOBField("MM",   maxDigits: 2)
+        let year  = makeDOBField("YYYY", maxDigits: 4)
+        
+        dobFields = [day, month, year]
+        
+        // ── Field row ────────────────────────────────────────────────
+        let fieldStack = UIStackView(arrangedSubviews: [day, month, year])
+        fieldStack.axis    = .horizontal
+        fieldStack.spacing = 14
+        fieldStack.translatesAutoresizingMaskIntoConstraints = false
+        
+        // ── Red error label (hidden by default) ──────────────────────
+        let errorLabel = UILabel()
+        errorLabel.font      = .systemFont(ofSize: 12, weight: .regular)
+        errorLabel.textColor = .systemRed
+        errorLabel.isHidden  = true
+        errorLabel.numberOfLines = 1
+        errorLabel.translatesAutoresizingMaskIntoConstraints = false
+        self.dobErrorLabel = errorLabel
+        
+       
+        let wrapper = UIView()
+        wrapper.addSubview(fieldStack)
+        wrapper.addSubview(errorLabel)
+        
+        NSLayoutConstraint.activate([
+            // Fields sit at the top-left of wrapper
+            fieldStack.topAnchor.constraint(equalTo: wrapper.topAnchor),
+            fieldStack.leadingAnchor.constraint(equalTo: wrapper.leadingAnchor),
+            
+            // Error label sits 6 pt below the fields, also left-aligned
+            errorLabel.topAnchor.constraint(equalTo: fieldStack.bottomAnchor, constant: 6),
+            errorLabel.leadingAnchor.constraint(equalTo: wrapper.leadingAnchor),
+            errorLabel.trailingAnchor.constraint(equalTo: wrapper.trailingAnchor),
+            errorLabel.bottomAnchor.constraint(equalTo: wrapper.bottomAnchor)
+        ])
+        
+        contentStack.addArrangedSubview(wrapper)
+    }
+    
+    func makeDOBField(_ placeholder: String, maxDigits: Int) -> UITextField {
+        
+        let tf            = UITextField()
+        tf.placeholder    = placeholder
+        tf.textAlignment  = .center
+        tf.font           = .systemFont(ofSize: 16, weight: .medium)
+        tf.keyboardType   = .numberPad
+        tf.delegate       = self
+        tf.tag            = maxDigits
+        
+        tf.layer.cornerRadius = 14
+        tf.layer.borderWidth  = 1
+        tf.layer.borderColor  = UIColor.systemGray4.cgColor
+        tf.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            tf.widthAnchor.constraint(equalToConstant: 72),
+            tf.heightAnchor.constraint(equalToConstant: 52)
+        ])
+        
+        attachDoneToolbar(to: tf)
+        tf.addTarget(self, action: #selector(dobChanged), for: .editingChanged)
+        
+        return tf
+    }
+}
+//
+// MARK: - Helpers
+//
+
+private extension QuestionnaireViewController {
+    
+    func makeRadioRow(
+        title: String
+    ) -> (UIView, RadioOptionView) {
+        
+        let radio = RadioOptionView()
+        
+        let label = UILabel()
+        label.text = title
+        
+        let stack = UIStackView(arrangedSubviews: [
+            radio,
+            label
+        ])
+        
+        stack.axis = .horizontal
+        stack.spacing = 8
+        
+        return (stack, radio)
+    }
+}
+
+//
+// MARK: - Continue Button
+//
+
+private extension QuestionnaireViewController {
+    
+    func setupContinueButton() {
+        
+        continueButton.setTitle("Continue", for: .normal)
+        continueButton.backgroundColor = AppColors.primaryButton
+        continueButton.layer.cornerRadius = 8
+        
+        continueButton.translatesAutoresizingMaskIntoConstraints = false
+        
+        view.addSubview(continueButton)
+        
+        NSLayoutConstraint.activate([
+            continueButton.leadingAnchor.constraint(
+                equalTo: view.leadingAnchor,
+                constant: 16
+            ),
+            continueButton.trailingAnchor.constraint(
+                equalTo: view.trailingAnchor,
+                constant: -16
+            ),
+            continueButton.bottomAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.bottomAnchor,
+                constant: -16
+            ),
+            continueButton.heightAnchor.constraint(equalToConstant: 52)
+        ])
+        
+        continueButton.isEnabled = false
+        continueButton.alpha = 0.5
+        
+        continueButton.addTarget(
+            self,
+            action: #selector(didTapContinue),
+            for: .touchUpInside
+        )
+    }
+}
+
+//
+// MARK: - Navigation
+//
+
+private extension QuestionnaireViewController {
+    
+    func navigateToBreakScreen() {
+        
+        let breakVC = container.makeBreakViewController()
+        
+        navigationController?.pushViewController(
+            breakVC,
+            animated: true
+        )
+    }
+}
+
+//
+// MARK: - Actions
+//
+
+@objc private extension QuestionnaireViewController {
     
     func dobChanged() {
         
+        guard dobFields.count == 3 else { return }
+        
         viewModel.updateDOB(
-            day: dobDayTF.text ?? "",
-            month: dobMonthTF.text ?? "",
-            year: dobYearTF.text ?? ""
+            day: dobFields[0].text ?? "",
+            month: dobFields[1].text ?? "",
+            year: dobFields[2].text ?? ""
         )
     }
-
+    
     func didTapContinue() {
         viewModel.submit()
+    }
+}
+
+
+//
+//  QuestionnaireViewController+KeyboardAvoidance.swift
+//
+
+extension QuestionnaireViewController {
+    
+    // MARK: - Register / Unregister
+    
+    func registerKeyboardObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillShow(_:)),
+            name: UIResponder.keyboardWillShowNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillHide(_:)),
+            name: UIResponder.keyboardWillHideNotification,
+            object: nil
+        )
+    }
+    
+    func unregisterKeyboardObservers() {
+        NotificationCenter.default.removeObserver(
+            self,
+            name: UIResponder.keyboardWillShowNotification,
+            object: nil
+        )
+        NotificationCenter.default.removeObserver(
+            self,
+            name: UIResponder.keyboardWillHideNotification,
+            object: nil
+        )
+    }
+    
+    // MARK: - Done toolbar
+    
+    func attachDoneToolbar(to textField: UITextField) {
+        let bar  = UIToolbar()
+        bar.sizeToFit()
+        
+        let flex = UIBarButtonItem(
+            barButtonSystemItem: .flexibleSpace,
+            target: nil,
+            action: nil
+        )
+
+        let done = UIBarButtonItem(
+            title: "Done",
+            style: .prominent,
+            target: nil,
+            action: #selector(UIResponder.resignFirstResponder)
+        )
+        
+        bar.items = [flex, done]
+        textField.inputAccessoryView = bar
+    }
+    
+    @objc func dismissKeyboard() { view.endEditing(true) }
+    
+    // MARK: - Keyboard show / hide
+    
+    @objc func keyboardWillShow(_ notification: Notification) {
+        guard
+            let userInfo      = notification.userInfo,
+            let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+            let duration      = userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double,
+            let curveRaw      = userInfo[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt
+        else { return }
+        
+        let insets  = UIEdgeInsets(top: 0, left: 0, bottom: keyboardFrame.height, right: 0)
+        let options = UIView.AnimationOptions(rawValue: curveRaw << 16)
+        
+        UIView.animate(withDuration: duration, delay: 0, options: options) {
+            self.scrollView.contentInset          = insets
+            self.scrollView.scrollIndicatorInsets = insets
+        }
+        
+        guard let activeField = dobFields.first(where: { $0.isFirstResponder }) else { return }
+        let fieldRect  = activeField.convert(activeField.bounds, to: scrollView)
+        let targetRect = fieldRect.insetBy(dx: 0, dy: -16)
+        
+        UIView.animate(withDuration: duration, delay: 0, options: options) {
+            self.scrollView.scrollRectToVisible(targetRect, animated: false)
+        }
+    }
+    
+    @objc func keyboardWillHide(_ notification: Notification) {
+        guard
+            let userInfo = notification.userInfo,
+            let duration = userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double,
+            let curveRaw = userInfo[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt
+        else { return }
+        
+        let options = UIView.AnimationOptions(rawValue: curveRaw << 16)
+        UIView.animate(withDuration: duration, delay: 0, options: options) {
+            self.scrollView.contentInset          = .zero
+            self.scrollView.scrollIndicatorInsets = .zero
+        }
+    }
+}
+
+// MARK: - UITextFieldDelegate  (digit limit · validation · auto-advance)
+
+extension QuestionnaireViewController: UITextFieldDelegate {
+    
+    // ── Max-digit limit & numeric-only gate ──────────────────────────────────
+    
+    public func textField(
+        _ textField: UITextField,
+        shouldChangeCharactersIn range: NSRange,
+        replacementString string: String
+    ) -> Bool {
+        guard dobFields.contains(textField) else { return true }
+        
+        let maxDigits = textField.tag          // 2 = DD or MM, 4 = YYYY
+        let current   = (textField.text ?? "") as NSString
+        let proposed  = current.replacingCharacters(in: range, with: string)
+        
+        let allDigits = CharacterSet.decimalDigits.isSuperset(
+            of: CharacterSet(charactersIn: string)
+        )
+        guard string.isEmpty || allDigits else { return false }
+        return proposed.count <= maxDigits
+    }
+    
+    // ── Validate · pad · auto-advance once the field is full ────────────────
+    
+    public func textFieldDidChangeSelection(_ textField: UITextField) {
+        guard dobFields.contains(textField) else { return }
+        
+        let text      = textField.text ?? ""
+        let maxDigits = textField.tag          // 2 or 4
+        
+        // While still typing — only clear a stale error
+        guard text.count == maxDigits else {
+            showDOBError(nil)
+            textField.layer.borderColor = UIColor.systemGray4.cgColor
+            return
+        }
+        
+        // ── Day validation ────────────────────────────────────────────
+        if textField === dobFields[safe: 0], let value = Int(text) {
+            guard (1...31).contains(value) else {
+                textField.layer.borderColor = UIColor.systemRed.cgColor
+                showDOBError("Enter a valid day (01 – 31)")
+                return
+            }
+        }
+        
+        // ── Month validation ──────────────────────────────────────────
+        if textField === dobFields[safe: 1], let value = Int(text) {
+            guard (1...12).contains(value) else {
+                textField.layer.borderColor = UIColor.systemRed.cgColor
+                showDOBError("Enter a valid month (01 – 12)")
+                return
+            }
+        }
+        
+        // ── All good: clear error, reset border ───────────────────────
+        showDOBError(nil)
+        textField.layer.borderColor = UIColor.systemGray4.cgColor
+        
+        // Pad single-digit day / month with a leading zero
+        if maxDigits == 2, let value = Int(text), value < 10, !text.hasPrefix("0") {
+            textField.text = String(format: "%02d", value)
+        }
+        
+        // Advance to next field or dismiss
+        if let idx = dobFields.firstIndex(of: textField) {
+            let next = idx + 1
+            if next < dobFields.count {
+                dobFields[next].becomeFirstResponder()
+            } else {
+                textField.resignFirstResponder()
+            }
+        }
+    }
+    
+    // ── Clear error when user starts correcting a field ──────────────────────
+    
+    public func textFieldDidBeginEditing(_ textField: UITextField) {
+        guard dobFields.contains(textField) else { return }
+        showDOBError(nil)
+        textField.layer.borderColor = UIColor.systemGray4.cgColor
+    }
+}
+
+// MARK: - Error label helper
+
+extension QuestionnaireViewController {
+    
+    /// Pass `nil` to hide the label; pass a string to show it in red.
+    func showDOBError(_ message: String?) {
+        guard let label = dobErrorLabel else { return }
+        if let msg = message {
+            label.text      = msg
+            label.isHidden  = false
+        } else {
+            label.isHidden  = true
+            label.text      = nil
+        }
+    }
+}
+
+// MARK: - Safe array subscript
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }

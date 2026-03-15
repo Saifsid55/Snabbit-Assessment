@@ -80,4 +80,38 @@ final class UserService {
                 }
             }
     }
+    
+    
+    func fetchCurrentUser(uid: String) async throws -> User {
+        
+        let document = try await db
+            .collection("users")
+            .document(uid)
+            .getDocument()
+        
+        guard let data = document.data() else {
+            throw NSError(
+                domain: "UserService",
+                code: 404,
+                userInfo: [NSLocalizedDescriptionKey: "User not found"]
+            )
+        }
+        
+        guard
+            let email = data["email"] as? String,
+            let username = data["username"] as? String
+        else {
+            throw NSError(
+                domain: "UserService",
+                code: 500,
+                userInfo: [NSLocalizedDescriptionKey: "Invalid user data"]
+            )
+        }
+        
+        return User(
+            uid: uid,
+            email: email,
+            username: username
+        )
+    }
 }

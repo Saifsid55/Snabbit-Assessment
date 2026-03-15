@@ -3,22 +3,25 @@ import Foundation
 
 protocol QuestionnaireViewModelProtocol {
     
+    // MARK: - Outputs
+    
+    var onQuestionsLoaded: (([QuestionnaireQuestion]) -> Void)? { get set }
+    
+    var onSubmitSuccess: (() -> Void)? { get set }
+    
+    var onProgressChanged: ((Float) -> Void)? { get set }
+    
     var isContinueEnabled: ((Bool) -> Void)? { get set }
+    // MARK: - Lifecycle
     
-    var onProgressChanged: ((Float) -> Void)?  { get set }
-    
-    var onFormCompleted: (() -> Void)? { get set }
-
-    func submit()
+    func loadQuestions()
     
     func toggleSkill(_ skill: String)
     
-    func selectSmartphone(_ value: Bool)
+    // MARK: - Submit
     
-    func selectCanGetPhone(_ value: Bool)
+    func submit()
     
-    func selectGoogleMaps(_ value: Bool)
-    
+    func selectSingleOption(questionId: String, value: String)
     func updateDOB(day: String, month: String, year: String)
-    
 }

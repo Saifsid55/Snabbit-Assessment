@@ -1,75 +1,86 @@
 
+//
+//  RadioOptionView.swift
+//
+
 import UIKit
 
 final class RadioOptionView: UIView {
-    
-    private let outerCircle = UIView()
-    private let innerCircle = UIView()
-    
+
+    // MARK: Public
+
     var onTap: (() -> Void)?
-    
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        setupUI()
-        setupGesture()
+
+    // MARK: Private
+
+    private let outerRing: UIView = {
+        let view = UIView()
+        view.layer.cornerRadius = 11
+        view.layer.borderWidth  = 1.5
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    private let innerDot: UIView = {
+        let view = UIView()
+        view.layer.cornerRadius = 6
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.isHidden = true
+        return view
+    }()
+
+    // MARK: Init
+
+    init() {
+        super.init(frame: .zero)
+        setupView()
+        setSelected(false)
     }
-    
-    required init?(coder: NSCoder) {
-        fatalError()
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    // MARK: Public API
+
+    func setSelected(_ selected: Bool) {
+        if selected {
+            outerRing.layer.borderColor = AppColors.radioSelected.cgColor
+            innerDot.backgroundColor    = AppColors.radioSelected
+            innerDot.isHidden = false
+        } else {
+            outerRing.layer.borderColor = AppColors.radioUnselected.cgColor
+            innerDot.isHidden = true
+        }
     }
-    
-    private func setupUI() {
-        
-        outerCircle.layer.cornerRadius = 12
-        outerCircle.layer.borderWidth = 2
-        outerCircle.layer.borderColor = UIColor.lightGray.cgColor
-        
-        outerCircle.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            outerCircle.widthAnchor.constraint(equalToConstant: 24),
-            outerCircle.heightAnchor.constraint(equalToConstant: 24)
-        ])
-        
-        innerCircle.backgroundColor = .systemPurple
-        innerCircle.layer.cornerRadius = 6
-        innerCircle.isHidden = true
-        
-        outerCircle.addSubview(innerCircle)
-        
-        innerCircle.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            innerCircle.centerXAnchor.constraint(equalTo: outerCircle.centerXAnchor),
-            innerCircle.centerYAnchor.constraint(equalTo: outerCircle.centerYAnchor),
-            innerCircle.widthAnchor.constraint(equalToConstant: 12),
-            innerCircle.heightAnchor.constraint(equalToConstant: 12)
-        ])
-        
-        addSubview(outerCircle)
-        
-        outerCircle.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            outerCircle.topAnchor.constraint(equalTo: topAnchor),
-            outerCircle.bottomAnchor.constraint(equalTo: bottomAnchor),
-            outerCircle.leadingAnchor.constraint(equalTo: leadingAnchor),
-            outerCircle.trailingAnchor.constraint(equalTo: trailingAnchor)
-        ])
-    }
-    
-    private func setupGesture() {
+}
+
+// MARK: - Layout
+
+private extension RadioOptionView {
+
+    func setupView() {
+
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
         addGestureRecognizer(tap)
+
+        addSubview(outerRing)
+        outerRing.addSubview(innerDot)
+
+        NSLayoutConstraint.activate([
+            outerRing.widthAnchor.constraint(equalToConstant: 22),
+            outerRing.heightAnchor.constraint(equalToConstant: 22),
+            outerRing.leadingAnchor.constraint(equalTo: leadingAnchor),
+            outerRing.trailingAnchor.constraint(equalTo: trailingAnchor),
+            outerRing.topAnchor.constraint(equalTo: topAnchor),
+            outerRing.bottomAnchor.constraint(equalTo: bottomAnchor),
+
+            innerDot.widthAnchor.constraint(equalToConstant: 12),
+            innerDot.heightAnchor.constraint(equalToConstant: 12),
+            innerDot.centerXAnchor.constraint(equalTo: outerRing.centerXAnchor),
+            innerDot.centerYAnchor.constraint(equalTo: outerRing.centerYAnchor)
+        ])
     }
-    
-    @objc
-    private func handleTap() {
-        onTap?()
-    }
-    
-    func setSelected(_ selected: Bool) {
-        innerCircle.isHidden = !selected
-        outerCircle.layer.borderColor = selected ? UIColor.systemPurple.cgColor : UIColor.lightGray.cgColor
-    }
+}
+
+@objc private extension RadioOptionView {
+    func handleTap() { onTap?() }
 }

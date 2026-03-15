@@ -14,6 +14,7 @@ final class BreakViewModel: BreakViewModelProtocol {
     private let observeBreakUseCase: ObserveBreakUseCaseProtocol
     private let endBreakUseCase: EndBreakUseCaseProtocol
     private let startBreakUseCase: StartBreakUseCaseProtocol
+    private let getCurrentUserUseCase: GetCurrentUserUseCaseProtocol
     
     // MARK: - State
     
@@ -26,6 +27,7 @@ final class BreakViewModel: BreakViewModelProtocol {
     
     var onStateChange: ((BreakViewState) -> Void)?
     var onError: ((String) -> Void)?
+    var onUsernameUpdate: ((String) -> Void)?
     
     // MARK: - Formatter
     
@@ -40,16 +42,20 @@ final class BreakViewModel: BreakViewModelProtocol {
     init(
         observeBreakUseCase: ObserveBreakUseCaseProtocol,
         startBreakUseCase: StartBreakUseCaseProtocol,
-        endBreakUseCase: EndBreakUseCaseProtocol
+        endBreakUseCase: EndBreakUseCaseProtocol,
+        getCurrentUserUseCase: GetCurrentUserUseCaseProtocol
     ) {
         self.observeBreakUseCase = observeBreakUseCase
         self.startBreakUseCase = startBreakUseCase
         self.endBreakUseCase = endBreakUseCase
+        self.getCurrentUserUseCase = getCurrentUserUseCase
     }
     
     // MARK: - Lifecycle
     
     func viewDidLoad() {
+        
+        fetchUsername()
         
         observeBreakUseCase.execute { [weak self] breakModel in
             
@@ -114,16 +120,20 @@ final class BreakViewModel: BreakViewModelProtocol {
     }
     
     func endBreakEarly() {
-        
         Task {
             do {
-                
                 try await endBreakUseCase.execute()
-                
             } catch {
                 onError?("Failed to end break")
             }
         }
+    }
+    
+    func didResetBreak() {
+        breakModel = nil
+        state = .notStarted
+        stopTimer()
+        sendStateUpdate(time: "00:00", progress: 0)
     }
     
     // MARK: - Timer
@@ -217,11 +227,19 @@ final class BreakViewModel: BreakViewModelProtocol {
     private func sendStateUpdate(time: String, progress: Float) {
         
         let endTimeText: String
-        
+
         if let breakModel,
            let startTime = breakModel.startTime {
             
-            let endTime = startTime.addingTimeInterval(breakModel.duration)
+            let endTime: Date
+            
+            if breakModel.status == "ended",
+               let actualEndTime = breakModel.endTime {
+                endTime = actualEndTime
+            } else {
+                endTime = startTime.addingTimeInterval(breakModel.duration)
+            }
+            
             endTimeText = Self.timeFormatter.string(from: endTime)
             
         } else {
@@ -231,23 +249,27 @@ final class BreakViewModel: BreakViewModelProtocol {
         let buttonTitle: String
         let buttonColor: UIColor
         let timelineState: TimelineState
-        
+        var titleText: String
+
         switch state {
             
         case .notStarted:
             buttonTitle = "Start my break"
             buttonColor = .systemGreen
             timelineState = .loggedIn
+            titleText = "Don't forget to take a break"
             
         case .running:
             buttonTitle = "End my break"
             buttonColor = .systemRed
             timelineState = .breakRunning
+            titleText = "You are on break!"
             
         case .ended:
             buttonTitle = ""
             buttonColor = .clear
             timelineState = .breakEnded
+            titleText = "Break ended at \(endTimeText)"
         }
         
         let viewState = BreakViewState(
@@ -257,10 +279,24 @@ final class BreakViewModel: BreakViewModelProtocol {
             buttonTitle: buttonTitle,
             buttonColor: buttonColor,
             timelineState: timelineState,
-            isBreakFinished: state == .ended
+            isBreakFinished: state == .ended,
+            titleText: titleText
         )
         
         onStateChange?(viewState)
+    }
+    
+    
+    private func fetchUsername() {
+        Task {
+            do {
+                let user = try await getCurrentUserUseCase.execute()
+                onUsernameUpdate?(user.username)
+                
+            } catch {
+                onUsernameUpdate?("User")
+            }
+        }
     }
     
     deinit {
