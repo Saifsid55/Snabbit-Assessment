@@ -11,10 +11,11 @@ final class BreakViewController: UIViewController {
     
     // MARK: - ViewModel & Container
     
-    private var viewModel: BreakViewModelProtocol
+    private let viewModel: BreakViewModelProtocol
     private let container: AppDependencyContainer
     
     // MARK: - UI Components
+    
     private let headerBackgroundImageView = UIImageView()
     private let headerView = BreakHeaderView()
     
@@ -29,12 +30,12 @@ final class BreakViewController: UIViewController {
     
     private let contentStack = UIStackView()
     
-    private var isBreakRunning = false
-    
     // MARK: - Init
     
-    init(viewModel: BreakViewModelProtocol,
-         container: AppDependencyContainer) {
+    init(
+        viewModel: BreakViewModelProtocol,
+        container: AppDependencyContainer
+    ) {
         self.viewModel = viewModel
         self.container = container
         super.init(nibName: nil, bundle: nil)
@@ -54,44 +55,50 @@ final class BreakViewController: UIViewController {
         setupLayout()
         bindViewModel()
         setupActions()
-        
-        timerCardView.endBreakButton.setTitle("Start my break", for: .normal)
-        timerCardView.endBreakButton.backgroundColor = .systemGreen
+        viewModel.viewDidLoad()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(true, animated: false)
+        viewModel.refreshState()
     }
 }
 
+//
 // MARK: - Layout
+//
 
 private extension BreakViewController {
     
     func setupLayout() {
         setupHeaderBackground()
-        setHeaderView()
+        setupHeaderView()
         setupScrollView()
-        setGreetingLabel()
+        setupGreeting()
         setupContent()
     }
     
-    func setHeaderView() {
+    func setupHeaderView() {
+        
         view.addSubview(headerView)
+        
         headerView.translatesAutoresizingMaskIntoConstraints = false
+        
         NSLayoutConstraint.activate([
             headerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             headerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             headerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            headerView.heightAnchor.constraint(equalToConstant: 44),
-            
+            headerView.heightAnchor.constraint(equalToConstant: 44)
         ])
+        
         headerView.delegate = self
     }
     
     func setupScrollView() {
+        
         view.addSubview(scrollView)
+        
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.backgroundColor = .clear
         
@@ -105,13 +112,12 @@ private extension BreakViewController {
     
     func setupHeaderBackground() {
         
-        // Background image
         headerBackgroundImageView.image = UIImage(named: "breakHeaderBG")
         headerBackgroundImageView.contentMode = .scaleAspectFill
         headerBackgroundImageView.clipsToBounds = true
-        headerBackgroundImageView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
         
         view.insertSubview(headerBackgroundImageView, at: 0)
+        
         headerBackgroundImageView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
@@ -122,7 +128,8 @@ private extension BreakViewController {
         ])
     }
     
-    func setGreetingLabel() {
+    func setupGreeting() {
+        
         greetingLabel.text = "Hi, Reshma!"
         greetingLabel.font = .systemFont(ofSize: 14, weight: .regular)
         greetingLabel.textColor = .white
@@ -134,15 +141,17 @@ private extension BreakViewController {
         greetingStack.axis = .vertical
         greetingStack.spacing = 4
         greetingStack.alignment = .leading
+        
         greetingStack.addArrangedSubview(greetingLabel)
         greetingStack.addArrangedSubview(titleLabel)
     }
     
     func setupContent() {
+        
         scrollView.addSubview(contentStack)
+        
         contentStack.axis = .vertical
         contentStack.spacing = 24
-        contentStack.backgroundColor = .clear
         contentStack.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
@@ -159,33 +168,92 @@ private extension BreakViewController {
     }
 }
 
+//
 // MARK: - Actions
+//
 
 private extension BreakViewController {
     
     func setupActions() {
+        
         timerCardView.endBreakButton.addTarget(
             self,
-            action: #selector(didTapEndBreak),
+            action: #selector(didTapBreakButton),
             for: .touchUpInside
         )
     }
     
     @objc
-    func didTapEndBreak() {
-        if isBreakRunning {
-            showEndBreakConfirmation()
-        } else {
-            viewModel.startBreak()
+    func didTapBreakButton() {
+        viewModel.didTapBreakButton()
+    }
+}
+
+//
+// MARK: - ViewModel Binding
+//
+
+private extension BreakViewController {
+    
+    func bindViewModel() {
+        
+        viewModel.onStateChange = { [weak self] state in
+            
+            guard let self else { return }
+            
+            DispatchQueue.main.async {
+                
+                self.timerCardView.timerView.update(
+                    time: state.timerText,
+                    progress: state.progress
+                )
+                
+                self.timerCardView.breakEndsLabel.text = state.breakEndsText
+                
+                self.timerCardView.endBreakButton.setTitle(
+                    state.buttonTitle,
+                    for: .normal
+                )
+                
+                self.timerCardView.endBreakButton.backgroundColor = state.buttonColor
+                
+                self.timelineView.update(state: state.timelineState)
+                
+                if state.isBreakFinished {
+                    
+                    self.timerCardView.showBreakFinishedState()
+                    
+                } else {
+                    
+                    self.timerCardView.showTimerState()
+                }
+            }
+        }
+        
+        viewModel.onError = { [weak self] error in
+            
+            guard let self else { return }
+            
+            DispatchQueue.main.async {
+                
+                if error == "confirm_end" {
+                    self.showEndBreakConfirmation()
+                } else {
+                    self.showError(message: error)
+                }
+            }
         }
     }
 }
 
+//
 // MARK: - End Break Confirmation
+//
 
 private extension BreakViewController {
     
     func showEndBreakConfirmation() {
+        
         let sheet = EndBreakBottomSheetViewController()
         sheet.modalPresentationStyle = .overFullScreen
         
@@ -197,77 +265,39 @@ private extension BreakViewController {
     }
 }
 
-
-// MARK: - Binding
+//
+// MARK: - Error
+//
 
 private extension BreakViewController {
     
-    func bindViewModel() {
+    func showError(message: String) {
         
-        viewModel.onTimerUpdate = { [weak self] time, progress in
-            DispatchQueue.main.async {
-                self?.timerCardView.timerView.update(time: time, progress: progress)
-                self?.timerCardView.breakEndsLabel.text =
-                "Break ends at \(self?.viewModel.breakEndTime ?? "")"
-            }
-        }
+        let alert = UIAlertController(
+            title: "Error",
+            message: message,
+            preferredStyle: .alert
+        )
         
-        viewModel.onBreakEnded = { [weak self] in
-            DispatchQueue.main.async {
-                guard let self else { return }
-                
-                self.timelineView.update(state: .breakEnded)
-                
-                self.timerCardView.showBreakFinishedState()
-                
-                UIView.animate(withDuration: 0.4) {
-                    self.view.layoutIfNeeded()
-                }
-            }
-        }
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
         
-        viewModel.onBreakStateChanged = { [weak self] state in
-            DispatchQueue.main.async {
-                switch state {
-                case .notStarted:
-                    self?.timerCardView.endBreakButton.setTitle("Start my break", for: .normal)
-                    self?.timerCardView.endBreakButton.backgroundColor = .systemGreen
-                    self?.isBreakRunning = false
-                case .running:
-                    self?.timerCardView.endBreakButton.setTitle("End my break", for: .normal)
-                    self?.timerCardView.endBreakButton.backgroundColor = .systemRed
-                    self?.isBreakRunning = true
-                    self?.timelineView.update(state: .breakRunning)
-                case .ended:
-                    break
-                }
-            }
-        }
-        
-        viewModel.onBreakFinishedUIUpdate = { [weak self] in
-            
-            DispatchQueue.main.async {
-                
-                guard let self else { return }
-                
-                UIView.animate(withDuration: 0.3) {
-                    
-                    self.timerCardView.endBreakButton.alpha = 0
-                    self.timerCardView.breakEndsLabel.alpha = 0
-                    
-                } completion: { _ in
-                    
-                    self.timerCardView.endBreakButton.isHidden = true
-                    self.timerCardView.breakEndsLabel.isHidden = true
-                }
-            }
-        }
+        present(alert, animated: true)
     }
 }
 
+//
+// MARK: - Header Delegate
+//
+
 extension BreakViewController: BreakHeaderViewDelegate {
+    
     func didTapHelp() {
+        
         let logoutVC = container.makeLogoutViewController()
-        navigationController?.pushViewController(logoutVC, animated: true)
+        
+        navigationController?.pushViewController(
+            logoutVC,
+            animated: true
+        )
     }
 }

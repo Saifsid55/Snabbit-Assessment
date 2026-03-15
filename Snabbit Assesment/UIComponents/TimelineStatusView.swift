@@ -7,13 +7,13 @@
 
 import UIKit
 
-final class TimelineStatusView: UIView {
+enum TimelineState {
+    case loggedIn
+    case breakRunning
+    case breakEnded
+}
 
-    enum TimelineState {
-        case loggedIn
-        case breakRunning
-        case breakEnded
-    }
+final class TimelineStatusView: UIView {
 
     // ← Pass position so first/last rows hide their outer lines
     private let loginRow  = TimelineRowView(title: "Login",             position: .first)

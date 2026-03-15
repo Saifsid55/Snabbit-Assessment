@@ -7,20 +7,34 @@
 import Foundation
 
 final class BreakRepository: BreakRepositoryProtocol {
-
-    func fetchBreak() async throws -> Break {
-
-        let start = Date()
-        let duration: TimeInterval = 180
-
-        return Break(
-            startTime: start,
-            duration: duration
-        )
+    
+    private let service: FirebaseBreakService
+    private let userId: String
+    
+    init(service: FirebaseBreakService, userId: String) {
+        self.service = service
+        self.userId = userId
     }
-
+    
+    func observeBreak(
+        onChange: @escaping (Break?) -> Void
+    ) {
+        service.observeBreak(userId: userId, onChange: onChange)
+    }
+    
+    func startBreak() async throws {
+        try await service.startBreak(userId: userId)
+    }
+    
+    func fetchBreak() async throws -> Break {
+        try await service.fetchBreak(userId: userId)
+    }
+    
+    func resetBreak() async throws {
+        try await service.resetBreak(userId: userId)
+    }
+    
     func endBreakEarly() async throws {
-
-        print("Break ended early sent to server")
+        try await service.endBreakEarly(userId: userId)
     }
 }

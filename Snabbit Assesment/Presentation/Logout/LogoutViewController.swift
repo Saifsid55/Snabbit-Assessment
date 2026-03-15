@@ -11,12 +11,14 @@ import FirebaseAuth
 final class LogoutViewController: UIViewController {
     
     private let logoutButton = UIButton(type: .system)
+    private let resetBreakButton = UIButton(type: .system)
     
     private var viewModel: LogoutViewModelProtocol
     private let container: AppDependencyContainer
     
-    init(viewModel: LogoutViewModelProtocol,
-         container: AppDependencyContainer
+    init(
+        viewModel: LogoutViewModelProtocol,
+        container: AppDependencyContainer
     ) {
         self.viewModel = viewModel
         self.container = container
@@ -41,7 +43,6 @@ final class LogoutViewController: UIViewController {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(false, animated: false)
     }
-
     
     private func bindViewModel() {
         
@@ -51,6 +52,10 @@ final class LogoutViewController: UIViewController {
         
         viewModel.onError = { error in
             print(error)
+        }
+        
+        viewModel.onResetSuccess = {
+            print("Break reset successfully")
         }
     }
 }
@@ -62,22 +67,35 @@ private extension LogoutViewController {
     func setupUI() {
         
         logoutButton.setTitle("Logout", for: .normal)
-        logoutButton.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
         logoutButton.backgroundColor = .systemRed
         logoutButton.setTitleColor(.white, for: .normal)
         logoutButton.layer.cornerRadius = 10
         
-        view.addSubview(logoutButton)
+        resetBreakButton.setTitle("Reset Break", for: .normal)
+        resetBreakButton.backgroundColor = .systemBlue
+        resetBreakButton.setTitleColor(.white, for: .normal)
+        resetBreakButton.layer.cornerRadius = 10
         
-        logoutButton.translatesAutoresizingMaskIntoConstraints = false
+        let stack = UIStackView(arrangedSubviews: [
+            resetBreakButton,
+            logoutButton
+        ])
+        
+        stack.axis = .vertical
+        stack.spacing = 20
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        
+        view.addSubview(stack)
         
         NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             
-            logoutButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            logoutButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            resetBreakButton.heightAnchor.constraint(equalToConstant: 50),
+            resetBreakButton.widthAnchor.constraint(equalToConstant: 160),
             
-            logoutButton.widthAnchor.constraint(equalToConstant: 160),
-            logoutButton.heightAnchor.constraint(equalToConstant: 50)
+            logoutButton.heightAnchor.constraint(equalToConstant: 50),
+            logoutButton.widthAnchor.constraint(equalToConstant: 160)
         ])
         
         logoutButton.addTarget(
@@ -85,9 +103,14 @@ private extension LogoutViewController {
             action: #selector(didTapLogout),
             for: .touchUpInside
         )
+        
+        resetBreakButton.addTarget(
+            self,
+            action: #selector(didTapResetBreak),
+            for: .touchUpInside
+        )
     }
 }
-
 // MARK: - Actions
 
 private extension LogoutViewController {
@@ -96,8 +119,12 @@ private extension LogoutViewController {
     func didTapLogout() {
         viewModel.logout()
     }
+    
+    @objc
+    func didTapResetBreak() {
+        viewModel.resetBreak()
+    }
 }
-
 // MARK: - Navigation
 
 private extension LogoutViewController {

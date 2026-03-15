@@ -6,8 +6,16 @@
 //
 
 protocol BreakRepositoryProtocol {
-
+    
+    func observeBreak(
+        onChange: @escaping (Break?) -> Void
+    )
+    
     func fetchBreak() async throws -> Break
+    
+    func startBreak() async throws
+    
+    func resetBreak() async throws
     
     func endBreakEarly() async throws
 }

@@ -7,11 +7,16 @@
 import Foundation
 
 struct Break {
-    let startTime: Date
-    let duration: TimeInterval
     
-    var endTime: Date {
-        startTime.addingTimeInterval(duration)
+    let startTime: Date?
+    let duration: Double
+    let status: String
+    let breakTaken: Bool
+    let endTime: Date?
+    
+    var computedEndTime: Date? {
+        guard let startTime else { return nil }
+        return startTime.addingTimeInterval(duration)
     }
 }
 

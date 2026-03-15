@@ -3,6 +3,10 @@ import FirebaseAuth
 
 final class FirebaseAuthService {
     
+    func currentUserId() -> String? {
+        Auth.auth().currentUser?.uid
+    }
+
     func login(
         email: String,
         password: String,

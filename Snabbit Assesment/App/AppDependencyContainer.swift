@@ -5,16 +5,23 @@
 //  Created by Muhammad Saif on 14/03/26.
 //
 
+//
+//  AppDependencyContainer.swift
+//  Snabbit Assesment
+//
+
 import UIKit
 
 final class AppDependencyContainer {
     
-    // MARK: Services
+    // MARK: - Services
     
     private lazy var authService = FirebaseAuthService()
     private lazy var userService = UserService()
+    private lazy var breakService = FirebaseBreakService()
     
-    // MARK: Repository
+    
+    // MARK: - Repositories
     
     private lazy var authRepository: AuthRepositoryProtocol =
     AuthRepository(
@@ -22,7 +29,20 @@ final class AppDependencyContainer {
         userService: userService
     )
     
-    // MARK: UseCases
+    private func makeBreakRepository() -> BreakRepository {
+        
+        guard let userId = authService.currentUserId() else {
+            fatalError("User not logged in")
+        }
+        
+        return BreakRepository(
+            service: breakService,
+            userId: userId
+        )
+    }
+    
+    
+    // MARK: - Auth UseCases
     
     private lazy var loginUseCase =
     LoginUseCase(repository: authRepository)
@@ -33,7 +53,8 @@ final class AppDependencyContainer {
     private lazy var logoutUseCase =
     LogoutUseCase(repository: authRepository)
     
-    // MARK: ViewModels
+    
+    // MARK: - ViewModels
     
     func makeLoginViewModel() -> LoginViewModel {
         LoginViewModel(loginUseCase: loginUseCase)
@@ -44,10 +65,20 @@ final class AppDependencyContainer {
     }
     
     func makeLogoutViewModel() -> LogoutViewModel {
-        LogoutViewModel(logoutUseCase: logoutUseCase)
+        
+        let repository = makeBreakRepository()
+        
+        let resetBreakUseCase =
+        ResetBreakUseCase(repository: repository)
+        
+        return LogoutViewModel(
+            logoutUseCase: logoutUseCase,
+            resetBreakUseCase: resetBreakUseCase
+        )
     }
     
-    // MARK: ViewControllers
+    
+    // MARK: - ViewControllers
     
     func makeLoginViewController() -> UIViewController {
         
@@ -59,6 +90,7 @@ final class AppDependencyContainer {
         )
     }
     
+    
     func makeSignupViewController() -> UIViewController {
         
         let vm = makeSignupViewModel()
@@ -69,28 +101,49 @@ final class AppDependencyContainer {
         )
     }
     
+    
     func makeQuestionnaireViewController() -> UIViewController {
         
         let vm = QuestionnaireViewModel()
         
-        return QuestionnaireViewController(viewModel: vm, container: self)
+        return QuestionnaireViewController(
+            viewModel: vm,
+            container: self
+        )
     }
+    
     
     func makeBreakViewController() -> BreakViewController {
         
-        let repository = BreakRepository()
+        let repository = makeBreakRepository()
         
-        let fetchBreak = FetchBreakUseCase(repository: repository)
+        // Break UseCases
         
-        let endBreak = EndBreakUseCase(repository: repository)
+        let observeBreak =
+        ObserveBreakUseCase(repository: repository)
+        
+        let startBreak =
+        StartBreakUseCase(repository: repository)
+        
+        let endBreak =
+        EndBreakUseCase(repository: repository)
+        
+        
+        // ViewModel
         
         let viewModel = BreakViewModel(
-            fetchBreakUseCase: fetchBreak,
+            observeBreakUseCase: observeBreak,
+            startBreakUseCase: startBreak,
             endBreakUseCase: endBreak
         )
         
-        return BreakViewController(viewModel: viewModel, container: self)
+        
+        return BreakViewController(
+            viewModel: viewModel,
+            container: self
+        )
     }
+    
     
     func makeLogoutViewController() -> UIViewController {
         

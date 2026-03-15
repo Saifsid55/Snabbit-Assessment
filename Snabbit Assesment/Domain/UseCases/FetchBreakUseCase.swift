@@ -6,19 +6,19 @@
 //
 
 
-protocol FetchBreakUseCaseProtocol {
-    func execute() async throws -> Break
-}
-
-final class FetchBreakUseCase: FetchBreakUseCaseProtocol {
-
-    private let repository: BreakRepositoryProtocol
-    
-    init(repository: BreakRepositoryProtocol) {
-        self.repository = repository
-    }
-
-    func execute() async throws -> Break {
-        try await repository.fetchBreak()
-    }
-}
+//protocol FetchBreakUseCaseProtocol {
+//    func execute() async throws -> Break
+//}
+//
+//final class FetchBreakUseCase: FetchBreakUseCaseProtocol {
+//
+//    private let repository: BreakRepositoryProtocol
+//
+//    init(repository: BreakRepositoryProtocol) {
+//        self.repository = repository
+//    }
+//
+//    func execute() async throws -> Break {
+//        try await repository.fetchBreak()
+//    }
+//}

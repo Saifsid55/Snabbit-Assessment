@@ -5,79 +5,167 @@
 //  Created by Muhammad Saif on 14/03/26.
 //
 import Foundation
+import UIKit
 
 final class BreakViewModel: BreakViewModelProtocol {
     
-    private let fetchBreakUseCase: FetchBreakUseCaseProtocol
+    // MARK: - Dependencies
+    
+    private let observeBreakUseCase: ObserveBreakUseCaseProtocol
     private let endBreakUseCase: EndBreakUseCaseProtocol
+    private let startBreakUseCase: StartBreakUseCaseProtocol
+    
+    // MARK: - State
     
     private var breakModel: Break?
-    
     private var timer: Timer?
     
     private var state: BreakState = .notStarted
     
-    var onBreakStateChanged: ((BreakState) -> Void)?
+    // MARK: - Binding
     
-    var onTimerUpdate: ((String, Float) -> Void)?
+    var onStateChange: ((BreakViewState) -> Void)?
+    var onError: ((String) -> Void)?
     
-    var onBreakFinishedUIUpdate: (() -> Void)?
+    // MARK: - Formatter
     
-    var onBreakEnded: (() -> Void)?
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "hh:mm a"
+        return formatter
+    }()
     
-    var remainingTime: String = ""
+    // MARK: - Init
     
-    var breakEndTime: String = ""
-    
-    init(fetchBreakUseCase: FetchBreakUseCaseProtocol,
-         endBreakUseCase: EndBreakUseCaseProtocol) {
-        
-        self.fetchBreakUseCase = fetchBreakUseCase
+    init(
+        observeBreakUseCase: ObserveBreakUseCaseProtocol,
+        startBreakUseCase: StartBreakUseCaseProtocol,
+        endBreakUseCase: EndBreakUseCaseProtocol
+    ) {
+        self.observeBreakUseCase = observeBreakUseCase
+        self.startBreakUseCase = startBreakUseCase
         self.endBreakUseCase = endBreakUseCase
     }
     
-    func startBreak() {
+    // MARK: - Lifecycle
+    
+    func viewDidLoad() {
         
-        Task {
+        observeBreakUseCase.execute { [weak self] breakModel in
             
-            let breakData = try await fetchBreakUseCase.execute()
+            guard let self else { return }
             
-            self.breakModel = breakData
+            self.breakModel = breakModel
             
-            let formatter = DateFormatter()
-            formatter.dateFormat = "hh:mm a"
-            breakEndTime = formatter.string(from: breakData.endTime)
+            if breakModel == nil {
+                self.state = .notStarted
+                self.stopTimer()
+                self.sendStateUpdate(time: "00:00", progress: 0)
+                return
+            }
             
-            state = .running
-            onBreakStateChanged?(.running)
-            
-            startTimer()
+            switch breakModel!.status {
+                
+            case "not_started":
+                self.state = .notStarted
+                self.stopTimer()
+                self.sendStateUpdate(time: "00:00", progress: 0)
+                
+            case "running":
+                self.state = .running
+                self.startTimer()
+                
+            case "ended":
+                self.state = .ended
+                self.stopTimer()
+                self.sendStateUpdate(time: "00:00", progress: 0)
+                
+            default:
+                break
+            }
         }
     }
     
-    private func startTimer() {
+    // MARK: - Actions
+    
+    func didTapBreakButton() {
         
-        timer = Timer.scheduledTimer(withTimeInterval: 1,
-                                     repeats: true) { [weak self] _ in
+        switch state {
             
-            self?.updateTime()
+        case .notStarted:
+            startBreak()
+            
+        case .running:
+            onError?("confirm_end")
+            
+        case .ended:
+            break
         }
     }
+    
+    func startBreak() {
+        Task {
+            do {
+                try await startBreakUseCase.execute()
+            } catch {
+                onError?("Failed to start break")
+            }
+        }
+    }
+    
+    func endBreakEarly() {
+        
+        Task {
+            do {
+                
+                try await endBreakUseCase.execute()
+                
+            } catch {
+                onError?("Failed to end break")
+            }
+        }
+    }
+    
+    // MARK: - Timer
+    
+    private func startTimer() {
+        
+        stopTimer()
+        
+        timer = Timer(
+            timeInterval: 1,
+            repeats: true
+        ) { [weak self] _ in
+            self?.updateTime()
+        }
+        
+        if let timer {
+            RunLoop.main.add(timer, forMode: .common)
+        }
+    }
+    
+    private func stopTimer() {
+        timer?.invalidate()
+        timer = nil
+    }
+    
+    // MARK: - Timer Update
     
     private func updateTime() {
         
         guard let breakModel else { return }
+        guard let startTime = breakModel.startTime else { return }
         
-        let remaining = breakModel.endTime.timeIntervalSinceNow
+        let endTime = startTime.addingTimeInterval(breakModel.duration)
+        let remaining = endTime.timeIntervalSinceNow
         
         if remaining <= 0 {
             
-            timer?.invalidate()
+            stopTimer()
             
             state = .ended
             
-            onBreakFinishedUIUpdate?()
-            onBreakEnded?()
+            sendStateUpdate(time: "00:00", progress: 0)
             
             return
         }
@@ -89,19 +177,93 @@ final class BreakViewModel: BreakViewModelProtocol {
         
         let progress = Float(remaining / breakModel.duration)
         
-        onTimerUpdate?(timeString, progress)
+        sendStateUpdate(time: timeString, progress: progress)
     }
     
-    func endBreakEarly() {
-        Task {
-            try await endBreakUseCase.execute()
-            
-            timer?.invalidate()
-            
-            state = .ended
-            
-            onBreakFinishedUIUpdate?()
-            onBreakEnded?()
+    // MARK: - Refresh Update
+    
+    func refreshState() {
+        
+        guard let breakModel else {
+            state = .notStarted
+            stopTimer()
+            sendStateUpdate(time: "00:00", progress: 0)
+            return
         }
+        
+        switch breakModel.status {
+            
+        case "not_started":
+            state = .notStarted
+            stopTimer()
+            sendStateUpdate(time: "00:00", progress: 0)
+            
+        case "running":
+            state = .running
+            startTimer()
+            
+        case "ended":
+            state = .ended
+            stopTimer()
+            sendStateUpdate(time: "00:00", progress: 0)
+            
+        default:
+            break
+        }
+    }
+    
+    // MARK: - View State Builder
+    
+    private func sendStateUpdate(time: String, progress: Float) {
+        
+        let endTimeText: String
+        
+        if let breakModel,
+           let startTime = breakModel.startTime {
+            
+            let endTime = startTime.addingTimeInterval(breakModel.duration)
+            endTimeText = Self.timeFormatter.string(from: endTime)
+            
+        } else {
+            endTimeText = "--:--"
+        }
+        
+        let buttonTitle: String
+        let buttonColor: UIColor
+        let timelineState: TimelineState
+        
+        switch state {
+            
+        case .notStarted:
+            buttonTitle = "Start my break"
+            buttonColor = .systemGreen
+            timelineState = .loggedIn
+            
+        case .running:
+            buttonTitle = "End my break"
+            buttonColor = .systemRed
+            timelineState = .breakRunning
+            
+        case .ended:
+            buttonTitle = ""
+            buttonColor = .clear
+            timelineState = .breakEnded
+        }
+        
+        let viewState = BreakViewState(
+            timerText: time,
+            progress: progress,
+            breakEndsText: breakModel != nil ? "Break ends at \(endTimeText)" : "",
+            buttonTitle: buttonTitle,
+            buttonColor: buttonColor,
+            timelineState: timelineState,
+            isBreakFinished: state == .ended
+        )
+        
+        onStateChange?(viewState)
+    }
+    
+    deinit {
+        timer?.invalidate()
     }
 }

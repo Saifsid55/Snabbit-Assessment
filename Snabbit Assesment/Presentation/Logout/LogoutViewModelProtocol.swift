@@ -8,9 +8,11 @@
 import Foundation
 
 protocol LogoutViewModelProtocol {
-    
+
     var onLogoutSuccess: (() -> Void)? { get set }
+    var onResetSuccess: (() -> Void)? { get set }
     var onError: ((String) -> Void)? { get set }
-    
+
     func logout()
+    func resetBreak()
 }

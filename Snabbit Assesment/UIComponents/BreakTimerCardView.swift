@@ -211,8 +211,8 @@ final class BreakTimerCardView: UIView {
         endBreakButtonHeightConstraint.isActive = false
         
         spacerEqualHeightConstraint.isActive = false
-        topSpacerFixedConstraint.isActive = true     // ← ADD
-        bottomSpacerFixedConstraint.isActive = true  // ← ADD
+        topSpacerFixedConstraint.isActive = true
+        bottomSpacerFixedConstraint.isActive = true
         
         titleLabel.isHidden = true
         subtitleLabel.isHidden = true
@@ -227,5 +227,12 @@ final class BreakTimerCardView: UIView {
         UIView.animate(withDuration: 0.35) {
             self.layoutIfNeeded()
         }
+    }
+    
+    func showTimerState() {
+
+        successView.isHidden = true
+        timerView.isHidden = false
+        endBreakButton.isHidden = false
     }
 }

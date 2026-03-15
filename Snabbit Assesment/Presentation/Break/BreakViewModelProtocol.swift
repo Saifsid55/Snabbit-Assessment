@@ -5,21 +5,26 @@
 //  Created by Muhammad Saif on 14/03/26.
 //
 
-protocol BreakViewModelProtocol {
 
-    var remainingTime: String { get }
+import Foundation
+
+protocol BreakViewModelProtocol: AnyObject {
     
-    var onTimerUpdate: ((String, Float) -> Void)? { get set }
+    // MARK: - Binding
     
-    var onBreakEnded: (() -> Void)? { get set }
+    var onStateChange: ((BreakViewState) -> Void)? { get set }
     
-    var breakEndTime: String { get }
+    var onError: ((String) -> Void)? { get set }
     
-    var onBreakStateChanged: ((BreakState) -> Void)? { get set }
-    
-    var onBreakFinishedUIUpdate: (() -> Void)? { get set }
+    // MARK: - Actions
     
     func startBreak()
     
     func endBreakEarly()
+    
+    func refreshState()
+    
+    func didTapBreakButton()
+    
+    func viewDidLoad()
 }
