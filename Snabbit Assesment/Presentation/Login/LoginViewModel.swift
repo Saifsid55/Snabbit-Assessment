@@ -1,5 +1,5 @@
 //
-//  LoginViewModelProtocol.swift
+//  LoginViewModel.swift
 //  Snabbit Assesment
 //
 //  Created by Muhammad Saif on 14/03/26.
@@ -55,5 +55,6 @@ final class LoginViewModel: LoginViewModelProtocol {
         let isValid = username.count >= Constants.minUsernameLength
             && password.count >= Constants.minPasswordLength
         delegate?.viewModelDidUpdateContinueState(isValid)
+        delegate?.viewModelDidFailWithError("") 
     }
 }

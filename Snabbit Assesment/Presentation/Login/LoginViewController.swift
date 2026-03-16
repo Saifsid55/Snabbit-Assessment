@@ -5,7 +5,6 @@
 //  Created by Muhammad Saif on 14/03/26.
 //
 
-
 import UIKit
 
 final class LoginViewController: UIViewController {
@@ -93,6 +92,17 @@ final class LoginViewController: UIViewController {
         return field
     }()
 
+    // MARK: - Error label
+
+    private lazy var errorLabel: UILabel = {
+        let label = UILabel()
+        label.textColor = .systemRed
+        label.font = .systemFont(ofSize: Constants.smallFontSize)
+        label.numberOfLines = 0
+        label.isHidden = true
+        return label
+    }()
+
     private lazy var referralCheckbox: UIButton = {
         let button = UIButton()
         button.setTitle(Constants.referralTitle, for: .normal)
@@ -120,6 +130,7 @@ final class LoginViewController: UIViewController {
             titleLabel,
             usernameTextField,
             passwordTextField,
+            errorLabel,
             referralCheckbox,
             signupButton
         ])
@@ -205,7 +216,6 @@ private extension LoginViewController {
         )
 
         NSLayoutConstraint.activate([
-            // Scroll view fills space above bottom container
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -222,7 +232,6 @@ private extension LoginViewController {
             topStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -Constants.horizontalPadding),
             topStack.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor),
 
-            // Bottom container pinned to bottom
             bottomContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: Constants.horizontalPadding),
             bottomContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -Constants.horizontalPadding),
             bottomContainerBottomConstraint
@@ -274,6 +283,14 @@ private extension LoginViewController {
                 ? AppColors.primaryButton.cgColor
                 : Constants.fieldInactiveBorderColor
         }
+    }
+
+    func shakeView(_ view: UIView) {
+        let animation = CAKeyframeAnimation(keyPath: "transform.translation.x")
+        animation.timingFunction = CAMediaTimingFunction(name: .linear)
+        animation.duration = 0.4
+        animation.values = [-8, 8, -6, 6, -4, 4, 0]
+        view.layer.add(animation, forKey: "shake")
     }
 }
 
@@ -343,10 +360,12 @@ private extension LoginViewController {
 
 private extension LoginViewController {
     @objc func usernameChanged() {
+        errorLabel.isHidden = true
         viewModel.updateUsername(usernameTextField.text ?? "")
     }
 
     @objc func passwordChanged() {
+        errorLabel.isHidden = true
         viewModel.updatePassword(passwordTextField.text ?? "")
     }
 
@@ -398,7 +417,14 @@ extension LoginViewController: LoginViewModelDelegate {
     }
 
     func viewModelDidFailWithError(_ message: String) {
-        print(message)
+        if message.isEmpty {
+            errorLabel.isHidden = true
+            errorLabel.text = nil
+        } else {
+            errorLabel.text = message
+            errorLabel.isHidden = false
+            shakeView(passwordTextField)
+        }
     }
 }
 

@@ -32,6 +32,7 @@ private enum Layout {
     static let radioRowSpacing: CGFloat = 8
     static let headerTopPadding: CGFloat = 16
     static let headerBottomPadding: CGFloat = 8
+    static let keyboardAnimationShift: UInt = 16
 }
 
 // MARK: - ViewController
@@ -89,6 +90,9 @@ final class QuestionnaireViewController: UIViewController {
     private var progressWidthConstraint: NSLayoutConstraint!
     private var dobFields: [UITextField] = []
     private var dobErrorLabel: UILabel?
+    
+    private var continueButtonBottomConstraint: NSLayoutConstraint!
+    
     
     // MARK: - Init
     
@@ -173,11 +177,15 @@ private extension QuestionnaireViewController {
     
     func setupContinueButton() {
         view.addSubview(continueButton)
+        continueButtonBottomConstraint = continueButton.bottomAnchor.constraint(
+            equalTo: view.safeAreaLayoutGuide.bottomAnchor,
+            constant: -Layout.continueButtonBottomPadding
+        )
         NSLayoutConstraint.activate([
             continueButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: Layout.continueButtonHorizontalPadding),
             continueButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -Layout.continueButtonHorizontalPadding),
-            continueButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Layout.continueButtonBottomPadding),
-            continueButton.heightAnchor.constraint(equalToConstant: Layout.continueButtonHeight)
+            continueButton.heightAnchor.constraint(equalToConstant: Layout.continueButtonHeight),
+            continueButtonBottomConstraint
         ])
     }
 }
@@ -330,8 +338,6 @@ private extension QuestionnaireViewController {
             tf.widthAnchor.constraint(equalToConstant: Layout.dobFieldWidth),
             tf.heightAnchor.constraint(equalToConstant: Layout.dobFieldHeight)
         ])
-//        attachDoneToolbar(to: tf)
-        tf.addTarget(self, action: #selector(dobChanged), for: .editingChanged)
         return tf
     }
 }
@@ -365,15 +371,6 @@ private extension QuestionnaireViewController {
 
 @objc private extension QuestionnaireViewController {
     
-    func dobChanged() {
-        guard dobFields.count == 3 else { return }
-        viewModel.updateDOB(
-            day: dobFields[0].text ?? "",
-            month: dobFields[1].text ?? "",
-            year: dobFields[2].text ?? ""
-        )
-    }
-    
     func didTapContinue() {
         Task { await viewModel.submit() }
     }
@@ -382,6 +379,14 @@ private extension QuestionnaireViewController {
 // MARK: - QuestionnaireViewModelDelegate
 
 extension QuestionnaireViewController: QuestionnaireViewModelDelegate {
+    func didUpdateDOBFields(day: String, month: String, year: String) {
+        MainActor.assumeIsolated {
+            dobFields[safe: 0]?.text = day
+            dobFields[safe: 1]?.text = month
+            dobFields[safe: 2]?.text = year
+        }
+    }
+    
     
     func didLoadQuestions(_ questions: [QuestionnaireQuestion]) {
         MainActor.assumeIsolated {
@@ -436,106 +441,88 @@ extension QuestionnaireViewController {
     
     @objc func keyboardWillShow(_ notification: Notification) {
         guard
-            let userInfo = notification.userInfo,
-            let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
-            let duration = userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double,
-            let curveRaw = userInfo[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt
+            let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+            let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double,
+            let curveRaw = notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt
         else { return }
-        
-        let insets = UIEdgeInsets(top: 0, left: 0, bottom: keyboardFrame.height, right: 0)
-        let options = UIView.AnimationOptions(rawValue: curveRaw << 16)
-        
-        UIView.animate(withDuration: duration, delay: 0, options: options) {
-            self.scrollView.contentInset = insets
-            self.scrollView.scrollIndicatorInsets = insets
-        }
-        
-        guard let activeField = dobFields.first(where: { $0.isFirstResponder }) else { return }
-        let fieldRect = activeField.convert(activeField.bounds, to: scrollView)
-        let targetRect = fieldRect.insetBy(dx: 0, dy: -16)
-        
-        UIView.animate(withDuration: duration, delay: 0, options: options) {
-            self.scrollView.scrollRectToVisible(targetRect, animated: false)
+        let safeAreaBottom = view.safeAreaInsets.bottom
+        continueButtonBottomConstraint.constant = -(keyboardFrame.height - safeAreaBottom + Layout.continueButtonBottomPadding)
+        UIView.animate(
+            withDuration: duration,
+            delay: 0,
+            options: UIView.AnimationOptions(rawValue: curveRaw << Layout.keyboardAnimationShift)
+        ) {
+            self.view.layoutIfNeeded()
         }
     }
     
     @objc func keyboardWillHide(_ notification: Notification) {
         guard
-            let userInfo = notification.userInfo,
-            let duration = userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double,
-            let curveRaw = userInfo[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt
+            let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double,
+            let curveRaw = notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt
         else { return }
-        
-        let options = UIView.AnimationOptions(rawValue: curveRaw << 16)
-        UIView.animate(withDuration: duration, delay: 0, options: options) {
-            self.scrollView.contentInset = .zero
-            self.scrollView.scrollIndicatorInsets = .zero
+        continueButtonBottomConstraint.constant = -Layout.continueButtonBottomPadding
+        UIView.animate(
+            withDuration: duration,
+            delay: 0,
+            options: UIView.AnimationOptions(rawValue: curveRaw << Layout.keyboardAnimationShift)
+        ) {
+            self.view.layoutIfNeeded()
         }
     }
 }
 
 // MARK: - UITextFieldDelegate
 
+// MARK: - UITextFieldDelegate
+
 extension QuestionnaireViewController: UITextFieldDelegate {
-    
-    public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         guard dobFields.contains(textField) else { return true }
-        let maxDigits = textField.tag
         let current = (textField.text ?? "") as NSString
         let proposed = current.replacingCharacters(in: range, with: string)
-        let allDigits = CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: string))
-        guard string.isEmpty || allDigits else { return false }
-        return proposed.count <= maxDigits
+        guard string.isEmpty || CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: string)) else { return false }
+        return proposed.count <= textField.tag
     }
     
-    public func textFieldDidChangeSelection(_ textField: UITextField) {
+    func textFieldDidEndEditing(_ textField: UITextField) {
         guard dobFields.contains(textField) else { return }
         let text = textField.text ?? ""
         let maxDigits = textField.tag
+        guard !text.isEmpty else { return }
         
-        guard text.count == maxDigits else {
-            showDOBError(nil)
-            textField.layer.borderColor = UIColor.systemGray4.cgColor
-            return
+        // Pad single digit day/month with leading zero
+        let needsPadding = (maxDigits == QuestionnaireConstants.DOB.dayLength || maxDigits == QuestionnaireConstants.DOB.monthLength)
+        if needsPadding, let value = Int(text), text.count == 1 {
+            let padded = String(format: "%02d", value)
+            textField.text = padded
         }
         
-        if textField === dobFields[safe: 0], let value = Int(text) {
-            guard (1...31).contains(value) else {
-                textField.layer.borderColor = UIColor.systemRed.cgColor
-                showDOBError("Enter a valid day (01 – 31)")
-                return
-            }
+        // Validate range after padding is applied
+        let finalText = textField.text ?? ""
+        if textField === dobFields[safe: 0], let value = Int(finalText), finalText.count == maxDigits {
+            let valid = (QuestionnaireConstants.DOB.minDay...QuestionnaireConstants.DOB.maxDay).contains(value)
+            textField.layer.borderColor = valid ? UIColor.systemGray4.cgColor : UIColor.systemRed.cgColor
+            showDOBError(valid ? nil : "Enter a valid day (01 – 31)")
+        }
+        if textField === dobFields[safe: 1], let value = Int(finalText), finalText.count == maxDigits {
+            let valid = (QuestionnaireConstants.DOB.minMonth...QuestionnaireConstants.DOB.maxMonth).contains(value)
+            textField.layer.borderColor = valid ? UIColor.systemGray4.cgColor : UIColor.systemRed.cgColor
+            showDOBError(valid ? nil : "Enter a valid month (01 – 12)")
         }
         
-        if textField === dobFields[safe: 1], let value = Int(text) {
-            guard (1...12).contains(value) else {
-                textField.layer.borderColor = UIColor.systemRed.cgColor
-                showDOBError("Enter a valid month (01 – 12)")
-                return
-            }
-        }
-        
-        showDOBError(nil)
-        textField.layer.borderColor = UIColor.systemGray4.cgColor
-        
-        if maxDigits == 2, let value = Int(text), value < 10, !text.hasPrefix("0") {
-            textField.text = String(format: "%02d", value)
-        }
-        
-        if let idx = dobFields.firstIndex(of: textField) {
-            let next = idx + 1
-            if next < dobFields.count {
-                dobFields[next].becomeFirstResponder()
-            } else {
-                textField.resignFirstResponder()
-            }
-        }
+        // Notify view model with latest values
+        viewModel.updateDOB(
+            day: dobFields[safe: 0]?.text ?? "",
+            month: dobFields[safe: 1]?.text ?? "",
+            year: dobFields[safe: 2]?.text ?? ""
+        )
     }
     
-    public func textFieldDidBeginEditing(_ textField: UITextField) {
+    func textFieldDidBeginEditing(_ textField: UITextField) {
         guard dobFields.contains(textField) else { return }
         showDOBError(nil)
-        textField.layer.borderColor = UIColor.systemGray4.cgColor
+        textField.layer.borderColor = AppColors.primaryButton.cgColor
     }
 }
 
