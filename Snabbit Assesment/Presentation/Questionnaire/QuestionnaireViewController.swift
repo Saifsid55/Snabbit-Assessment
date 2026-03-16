@@ -482,9 +482,15 @@ extension QuestionnaireViewController: UITextFieldDelegate {
         let current = (textField.text ?? "") as NSString
         let proposed = current.replacingCharacters(in: range, with: string)
         guard string.isEmpty || CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: string)) else { return false }
-        return proposed.count <= textField.tag
+        guard proposed.count <= textField.tag else { return false }
+
+        if proposed.count == textField.tag {
+            DispatchQueue.main.async { textField.resignFirstResponder() }
+        }
+
+        return true
     }
-    
+
     func textFieldDidEndEditing(_ textField: UITextField) {
         guard dobFields.contains(textField) else { return }
         let text = textField.text ?? ""
